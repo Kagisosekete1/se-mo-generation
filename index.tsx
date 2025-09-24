@@ -77,6 +77,7 @@ let currentPromptText = '';
 
 // --- DOM Elements ---
 let mainContent: HTMLElement;
+let splashScreen: HTMLElement;
 
 // Auth Elements
 let authContainer: HTMLDivElement;
@@ -273,6 +274,7 @@ let fullscreenCloseIcon: SVGElement;
 
 function cacheDOMElements() {
     mainContent = document.querySelector('main') as HTMLElement;
+    splashScreen = document.getElementById('splash-screen') as HTMLElement;
 
     // Auth
     authContainer = document.querySelector('#auth-container') as HTMLDivElement;
@@ -2346,12 +2348,27 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Gemini API key is not configured.');
         const configErrorModal = document.querySelector('#config-error-overlay');
         
+        // Hide splash screen immediately to show the error
+        if (splashScreen) {
+            splashScreen.style.display = 'none';
+        }
+        
         if (configErrorModal) {
             (configErrorModal as HTMLElement).style.display = 'flex';
         }
         // Stop further execution
         return;
     }
+
+    // --- Splash Screen Logic ---
+    setTimeout(() => {
+        if (splashScreen) {
+            splashScreen.classList.add('hidden');
+            splashScreen.addEventListener('transitionend', () => {
+                if(splashScreen) splashScreen.style.display = 'none';
+            });
+        }
+    }, 1500); // Simulate loading time
 
     // --- Auth Listeners ---
     if(loginForm) loginForm.addEventListener('submit', handleLogin);
