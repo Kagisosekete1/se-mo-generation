@@ -1157,23 +1157,41 @@ async function generateVideoContent(prompt, imageBytes, mimeType, durationSecs, 
   clearInterval(messageInterval);
 
   const v = operation.response?.generatedVideos?.[0];
-  if (!v) throw new Error('No videos generated');
+  if (!v || !v.video || !v.video.uri) throw new Error('No videos generated or video URI is missing.');
 
   if (statusEl) statusEl.innerText = 'Finalizing video...';
-  // Use the raw URI directly, as fetching and creating a blob URL can cause issues in some deployment environments.
-  const downloadUrl = `${v.video.uri}&key=${GEMINI_API_KEY}`;
-    
-  if (video) {
-    video.src = downloadUrl;
-    video.style.display = 'block';
+  
+  const fetchUrl = `${v.video.uri}&key=${GEMINI_API_KEY}`;
+  
+  // Fetch the video data and create a Blob URL for reliable playback.
+  try {
+      const response = await fetch(fetchUrl);
+      if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch video: ${response.status} ${response.statusText}. Details: ${errorText}`);
+      }
+      const videoBlob = await response.blob();
+      const blobUrl = URL.createObjectURL(videoBlob);
+        
+      if (video) {
+        // Use blob for immediate playback
+        video.src = blobUrl;
+        video.style.display = 'block';
+      }
+      if (resultImage) resultImage.style.display = 'none';
+      if (resultsContainer) resultsContainer.style.display = 'block';
+      if (statusEl) statusEl.innerText = 'Video generated successfully!';
+      if (saveCreationButton) saveCreationButton.disabled = false;
+      if (shareButton) shareButton.disabled = false;
+      if (viewCreationButton) viewCreationButton.disabled = false;
+      
+      // Store the original fetchable URL for downloading and saving.
+      // This is more persistent than a temporary blob URL.
+      currentCreation = { data: fetchUrl, type: 'video' };
+  } catch (fetchError) {
+      console.error('Error fetching/playing video content:', fetchError);
+      throw new Error(`The generated video could not be loaded. Details: ${(fetchError as Error).message}`);
   }
-  if (resultImage) resultImage.style.display = 'none';
-  if (resultsContainer) resultsContainer.style.display = 'block';
-  if (statusEl) statusEl.innerText = 'Video generated successfully!';
-  if (saveCreationButton) saveCreationButton.disabled = false;
-  if (shareButton) shareButton.disabled = false;
-  if (viewCreationButton) viewCreationButton.disabled = false;
-  currentCreation = { data: downloadUrl, type: 'video' };
 }
 
 function applyWatermark(imageUrl: string): Promise<string> {
@@ -1293,9 +1311,17 @@ async function generate() {
   } catch (e) {
     console.error(`${generationType} generation failed:`, e);
     const type = generationType.charAt(0).toUpperCase() + generationType.slice(1);
-    const errorMessage = (e as Error).message || 'An unknown error occurred.';
+    
+    let rawErrorMessage = 'An unknown error occurred.';
+    if (e instanceof Error) {
+        rawErrorMessage = e.message;
+    } else if (typeof e === 'string') {
+        rawErrorMessage = e;
+    } else if (typeof e === 'object' && e !== null) {
+        rawErrorMessage = JSON.stringify(e);
+    }
 
-    if (errorMessage.toLowerCase().includes('quota exceeded') || errorMessage.toLowerCase().includes('resource_exhausted')) {
+    if (rawErrorMessage.toLowerCase().includes('quota exceeded') || rawErrorMessage.toLowerCase().includes('resource_exhausted')) {
         showErrorModal(
             [
                 'The API key has reached its usage limit for video generation. Please check your Google AI Studio account for details on your quota.',
@@ -1304,7 +1330,17 @@ async function generate() {
             'API Quota Exceeded'
         );
     } else {
-        showErrorModal([errorMessage], `${type} Generation Failed`);
+        let displayMessage = rawErrorMessage;
+        try {
+            // Try to parse if it's a JSON string to get a cleaner message
+            const parsed = JSON.parse(rawErrorMessage);
+            if (parsed.error && parsed.error.message) {
+                displayMessage = parsed.error.message;
+            }
+        } catch (parseError) {
+            // Not a JSON string, use the raw message which is fine.
+        }
+        showErrorModal([displayMessage], `${type} Generation Failed`);
     }
     
     if (statusEl) statusEl.innerText = `Error generating ${generationType}.`;
@@ -1719,11 +1755,20 @@ function showCreationsGallery() {
             card.dataset.id = String(creation.id); // Store ID on the element
             card.draggable = true; // Make it draggable
             
-            let mediaEl;
+            let mediaEl: HTMLImageElement | HTMLVideoElement;
             if (creation.type === 'video') {
                 mediaEl = document.createElement('video');
-                mediaEl.src = creation.data;
                 mediaEl.muted = true; // Mute videos in gallery
+                mediaEl.preload = 'metadata';
+                // Asynchronously fetch and set the video source for reliable playback
+                fetch(creation.data)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        if (mediaEl instanceof HTMLVideoElement) {
+                           mediaEl.src = URL.createObjectURL(blob);
+                        }
+                    })
+                    .catch(e => console.error(`Failed to load video creation ${creation.id}:`, e));
             } else {
                 mediaEl = document.createElement('img');
                 mediaEl.src = creation.data;
@@ -1864,13 +1909,34 @@ function showLargeView() {
             largeViewImage.src = currentCreation.data;
             largeViewImage.style.display = 'block';
         }
-        if (largeViewVideo) largeViewVideo.style.display = 'none';
+        if (largeViewVideo) {
+            largeViewVideo.src = '';
+            largeViewVideo.style.display = 'none';
+        }
     } else { // video
         if (largeViewVideo) {
-            largeViewVideo.src = currentCreation.data;
+            largeViewVideo.src = ''; // Clear previous source before fetching
             largeViewVideo.style.display = 'block';
         }
-        if (largeViewImage) largeViewImage.style.display = 'none';
+        if (largeViewImage) {
+            largeViewImage.style.display = 'none';
+        }
+        
+        // Asynchronously fetch and set the video source for reliable playback
+        fetch(currentCreation.data)
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                return res.blob();
+            })
+            .then(blob => {
+                if (largeViewVideo) {
+                    largeViewVideo.src = URL.createObjectURL(blob);
+                }
+            })
+            .catch(e => {
+                console.error("Could not load large view video:", e);
+                showErrorModal(["Failed to load video for viewing. Please try downloading it instead."], "Playback Error");
+            });
     }
     largeViewModal.style.display = 'flex';
 }

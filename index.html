@@ -1,11 +1,19 @@
-<script type="importmap">
-  {
-    "imports": {
-      "@google/genai": "https://esm.sh/@google/genai@^1.4.0"
-    }
-  }
-</script>
-<link rel="stylesheet" href="index.css">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Se-Mo Video Generation</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/genai": "https://esm.sh/@google/genai@^1.4.0"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
 
 <div id="splash-screen">
   <div class="splash-logo-container">
@@ -420,6 +428,10 @@
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
                 <span>Privacy & Data</span>
             </button>
+            <button class="settings-nav-link" data-pane="help">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
+                <span>Help & Support</span>
+            </button>
         </nav>
         <div class="settings-panes">
             <!-- Profile Pane -->
@@ -677,6 +689,34 @@
                     <h4>Delete Account</h4>
                     <small>Permanently delete your account and all associated data. This action cannot be undone.</small>
                     <button id="delete-account-button" class="settings-utility-button danger">Delete Account</button>
+                </div>
+            </div>
+            <!-- Help & Support Pane -->
+            <div class="settings-pane" id="pane-help">
+                <div class="help-support-content">
+                  <h3>Getting Started</h3>
+                  <p>Welcome to Se-Mo Generation! This tool allows you to create unique videos and images from text prompts. Here's a quick guide:</p>
+                  <ol>
+                    <li><strong>Select Type:</strong> Choose whether you want to generate a 'Video' or an 'Image'.</li>
+                    <li><strong>Write a Prompt:</strong> Describe what you want to create in the prompt box. Be as descriptive as possible for the best results. Use the "Enhance with AI" button to improve your prompt.</li>
+                    <li><strong>Use Conditioning (Optional):</strong> Upload an image to influence the generation process. This can be used for both video and image generation.</li>
+                    <li><strong>Adjust Settings:</strong> Set the duration and aspect ratio for videos, or the aspect ratio and format for images.</li>
+                    <li><strong>Generate:</strong> Hit the generate button and watch the AI bring your idea to life!</li>
+                  </ol>
+
+                  <h3>Frequently Asked Questions</h3>
+                  <h4>Generation</h4>
+                  <p><strong>Why did my generation fail?</strong><br>Generations can fail due to several reasons, including network issues, API service interruptions, or prompts that violate safety policies. If the problem persists, try a different prompt or check your internet connection.</p>
+                  <p><strong>How can I improve my results?</strong><br>Detailed prompts produce better results. Mention the subject, action, style (e.g., "cinematic," "oil painting"), lighting ("soft morning light"), and composition ("wide-angle shot").</p>
+
+                  <h4>Account & Billing</h4>
+                  <p><strong>How do I upgrade to Premium?</strong><br>You can upgrade by clicking the "Go Premium" button on the dashboard or from the "Subscription & Payments" tab in your settings.</p>
+                  <p><strong>How can I manage my payment methods?</strong><br>Premium users can add, remove, and set a default payment method in the "Subscription & Payments" tab in their settings.</p>
+                  
+                  <h3>Contact Us</h3>
+                  <p>If your question isn't answered here, or if you're experiencing technical difficulties, please don't hesitate to reach out to our support team.</p>
+                  <p><strong>Email:</strong> <a href="mailto:support@semo-gen.example.com">support@semo-gen.example.com</a></p>
+                  <p><strong>Support Hours:</strong> Monday - Friday, 9 AM - 5 PM (UTC)</p>
                 </div>
             </div>
         </div>
