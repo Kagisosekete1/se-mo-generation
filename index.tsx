@@ -2368,7 +2368,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(splashScreen) splashScreen.style.display = 'none';
             });
         }
-    }, 1500); // Simulate loading time
+    }, 2000); // Simulate loading time
 
     // --- Auth Listeners ---
     if(loginForm) loginForm.addEventListener('submit', handleLogin);
