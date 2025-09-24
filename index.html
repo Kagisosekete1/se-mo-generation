@@ -1,0 +1,747 @@
+<script type="importmap">
+  {
+    "imports": {
+      "@google/genai": "https://esm.sh/@google/genai@^1.4.0"
+    }
+  }
+</script>
+<link rel="stylesheet" href="index.css">
+
+<div id="splash-screen">
+  <div class="splash-logo-container">
+    <svg class="splash-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#4285F4"/>
+                <stop offset="100%" stop-color="#34A853"/>
+            </linearGradient>
+        </defs>
+        <circle cx="50" cy="50" r="48" fill="url(#logo-gradient)"/>
+        <path d="M40 68.42V31.58C40 29.53 42.38 28.3 44.04 29.58L69.68 47.99C71.21 49.17 71.21 51.41 69.68 52.59L44.04 71.01C42.38 72.28 40 71.05 40 68.42Z" fill="white"/>
+    </svg>
+  </div>
+  <h1>Se-Mo Video Generation</h1>
+</div>
+
+<div id="auth-container" style="display: none;">
+    <div class="auth-card">
+        <h2 id="auth-title">Login</h2>
+        <p id="auth-subtitle">Welcome back! Please enter your details.</p>
+        <div id="auth-error" class="auth-error"></div>
+        <div id="auth-success" class="auth-success" style="display:none;"></div>
+        <form id="login-form">
+            <div class="auth-form-group">
+                <label for="login-email">Email</label>
+                <input type="email" id="login-email" required placeholder="name@example.com">
+            </div>
+            <div class="auth-form-group">
+                <label for="login-password">Password</label>
+                <input type="password" id="login-password" required placeholder="••••••••">
+            </div>
+            <div class="forgot-password-link-container">
+                <a href="#" id="forgot-password-link">Forgot Password?</a>
+            </div>
+            <button type="submit" class="auth-button">Login</button>
+        </form>
+        <form id="register-form" style="display: none;">
+             <div class="auth-form-group">
+                <label for="register-name">Name</label>
+                <input type="text" id="register-name" required placeholder="Your Name">
+            </div>
+             <div class="auth-form-group">
+                <label for="register-email">Email</label>
+                <input type="email" id="register-email" required placeholder="name@example.com">
+            </div>
+            <div class="auth-form-group">
+                <label for="register-password">Password</label>
+                <input type="password" id="register-password" required placeholder="Minimum 6 characters">
+            </div>
+            <button type="submit" class="auth-button">Create Account</button>
+        </form>
+        <div id="auth-legal-container" style="display: none;">
+            <div class="auth-legal-tabs">
+                <button class="auth-legal-tab active" data-tab="terms">Terms</button>
+                <button class="auth-legal-tab" data-tab="privacy">Privacy</button>
+            </div>
+            <div class="auth-legal-content">
+                <div class="auth-legal-pane active" data-tab-content="terms">
+                    <h4>Terms of Service</h4>
+                    <p>By registering, you agree to our terms and conditions. These terms govern your use of the Se-Mo Generation service. You agree not to use the service for any illegal or unauthorized purpose.</p>
+                </div>
+                <div class="auth-legal-pane" data-tab-content="privacy">
+                    <h4>Privacy Policy</h4>
+                    <p>We are committed to protecting your privacy. This policy outlines how we collect, use, and protect your personal information when you use our services.</p>
+                </div>
+            </div>
+        </div>
+        <form id="forgot-password-form" style="display: none;">
+             <div class="auth-form-group">
+                <label for="forgot-email">Email</label>
+                <input type="email" id="forgot-email" required placeholder="name@example.com">
+            </div>
+            <button type="submit" class="auth-button">Send Reset Link</button>
+        </form>
+         <form id="reset-password-form" style="display: none;">
+             <div class="auth-form-group">
+                <label for="reset-new-password">New Password</label>
+                <input type="password" id="reset-new-password" required placeholder="••••••••">
+            </div>
+            <div class="auth-form-group">
+                <label for="reset-confirm-password">Confirm New Password</label>
+                <input type="password" id="reset-confirm-password" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="auth-button">Reset Password</button>
+        </form>
+        <p class="auth-toggle">
+            <span id="auth-toggle-text">Don't have an account?</span>
+            <a href="#" id="auth-toggle-link" data-mode="register">Register</a>
+        </p>
+    </div>
+</div>
+
+<main style="display:none;">
+    <header class="main-header">
+        <div id="user-status-container">
+            <span id="user-status"></span>
+            <button id="subscribe-button">Go Premium</button>
+        </div>
+        <div id="profile-container">
+            <button id="profile-button">
+                <img id="dashboard-profile-picture" class="dashboard-avatar" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2EwYTBiMiIgd2lkdGg9IjgwcHgiIGhlaWdodD0iODBweCI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==" alt="User Avatar">
+                <div class="profile-button-text-container">
+                    <div id="user-name-display">User</div>
+                    <div id="user-email-display">user@example.com</div>
+                </div>
+                <svg class="profile-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+            </button>
+            <div id="profile-dropdown" style="display: none;">
+                <a href="#" id="my-creations-button">My Creations</a>
+                <a href="#" id="settings-button">Settings</a>
+                <a href="#" id="logout-button">Logout</a>
+            </div>
+        </div>
+    </header>
+    <h1>Se-Mo Generation</h1>
+    <div id="generation-type-container">
+        <label class="gen-type-label">
+            <input type="radio" name="generation-type" value="video" checked>
+            <span>Video</span>
+        </label>
+        <label class="gen-type-label">
+            <input type="radio" name="generation-type" value="image">
+            <span>Image</span>
+        </label>
+    </div>
+
+    <div id="prompt-container">
+        <label for="prompt-input">Prompt</label>
+        <div class="prompt-wrapper">
+            <textarea id="prompt-input" rows="3" placeholder="e.g., A cinematic shot of a raccoon chief in tribal attire, leading a war party."></textarea>
+            <button id="ai-assist-button" class="ai-assist-button" title="Enhance with AI" disabled>
+                <svg id="ai-assist-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5 4.5L9 11l-2.5 2.5L9 16l2.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15zM9.5 5.5L7 3l-2.5 2.5L7 8l2.5-2.5z"/></svg>
+                <div id="ai-assist-spinner" class="ai-assist-spinner"></div>
+            </button>
+        </div>
+        <select id="example-prompts-select" aria-label="Example prompts">
+          <option value="">-- Or try an example --</option>
+          <option value="A majestic lion surveying its kingdom from a cliff at sunrise.">A majestic lion surveying its kingdom...</option>
+          <option value="A futuristic city with flying cars and holographic billboards.">A futuristic city with flying cars...</option>
+          <option value="A serene underwater scene with colorful coral reefs and exotic fish.">A serene underwater scene...</option>
+          <option value="An astronaut floating in space, gazing at the Earth from afar.">An astronaut floating in space...</option>
+          <option value="A thrilling car chase through a bustling city at night.">A thrilling car chase...</option>
+          <option value="A dog wearing a superhero cape, flying through the sky.">A superhero dog flying...</option>
+          <option value="A time-lapse of a flower blooming, from bud to full blossom.">A time-lapse of a flower blooming...</option>
+        </select>
+    </div>
+    
+    <div id="upload-container">
+        <label for="file-input">Conditioning (Optional: Image)</label>
+        <div class="file-input-wrapper">
+          <label for="file-input" class="file-input-button">
+            <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
+            <span>Choose File</span>
+          </label>
+          <span id="file-name-display" class="file-name-display">No file chosen</span>
+        </div>
+        <input type="file" id="file-input" class="sr-only" accept="image/*,video/*">
+    </div>
+
+    <div id="preview-container" style="display: none;">
+      <img id="image-preview" class="preview-media" alt="Image preview">
+      <video id="video-preview" class="preview-media" muted playsinline controls></video>
+      <button id="clear-preview-button" title="Clear selection">&times;</button>
+    </div>
+
+    <div id="video-settings">
+        <fieldset class="settings-fieldset">
+            <legend>Video Settings</legend>
+             <div class="setting">
+                <label for="duration-slider">
+                    <span>Duration</span>
+                    <span id="duration-value">5s</span>
+                </label>
+                <input type="range" id="duration-slider" min="2" max="15" value="5" aria-labelledby="duration-value">
+            </div>
+            <div class="setting">
+              <label for="aspect-ratio-select">Aspect Ratio</label>
+              <select id="aspect-ratio-select">
+                <option value="16:9">16:9 (Widescreen)</option>
+                <option value="9:16">9:16 (Vertical)</option>
+                <option value="1:1">1:1 (Square)</option>
+                <option value="4:3">4:3 (Classic TV)</option>
+                <option value="3:4">3:4 (Portrait)</option>
+              </select>
+            </div>
+        </fieldset>
+    </div>
+
+    <div id="image-settings" style="display: none;">
+         <fieldset class="settings-fieldset image-settings-fieldset">
+            <legend>Image Settings</legend>
+            <div class="setting">
+                <label for="image-aspect-ratio-select">Aspect Ratio</label>
+                <select id="image-aspect-ratio-select">
+                    <option value="1:1">1:1 (Square)</option>
+                    <option value="16:9">16:9 (Widescreen)</option>
+                    <option value="9:16">9:16 (Vertical)</option>
+                    <option value="4:3">4:3 (Landscape)</option>
+                    <option value="3:4">3:4 (Portrait)</option>
+                </select>
+            </div>
+             <div class="setting">
+                <label for="image-format-select">Format</label>
+                <select id="image-format-select">
+                    <option value="image/jpeg">JPEG</option>
+                    <option value="image/png">PNG</option>
+                </select>
+            </div>
+        </fieldset>
+    </div>
+    
+    <button id="generate-button">Generate Video</button>
+    
+    <div id="spinner-container">
+        <div class="spinner"></div>
+    </div>
+    <div id="status">Ready.</div>
+    
+    <div id="results-container">
+        <h2>Your Creation</h2>
+        <div class="video-player-container">
+            <div class="video-controls-container">
+                 <input type="range" class="progress-bar" value="0" min="0" step="0.01">
+                <div class="controls">
+                    <button id="play-pause-btn" class="control-button" title="Play/Pause">
+                        <svg id="play-btn-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+                        <svg id="pause-btn-icon" style="display:none;" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg>
+                    </button>
+                    <div class="time-container">
+                        <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
+                    </div>
+                    <div class="volume-container">
+                        <button id="volume-btn" class="control-button" title="Mute/Unmute">
+                           <svg id="volume-high-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg>
+                           <svg id="volume-muted-icon" style="display:none;" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"></path></svg>
+                        </button>
+                        <input type="range" class="volume-slider" max="1" value="1" step="0.01">
+                    </div>
+                    <div class="speed-container">
+                        <button id="speed-btn" class="control-button" title="Playback Speed">1x</button>
+                        <div class="speed-options">
+                            <button data-speed="0.5">0.5x</button>
+                            <button data-speed="1" class="active">1x</button>
+                            <button data-speed="1.5">1.5x</button>
+                            <button data-speed="2">2x</button>
+                        </div>
+                    </div>
+                     <button id="fullscreen-btn" class="control-button" title="Fullscreen">
+                        <svg id="fullscreen-open-icon" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"></path></svg>
+                        <svg id="fullscreen-close-icon" style="display:none;" viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"></path></svg>
+                    </button>
+                </div>
+            </div>
+            <video id="video" style="display: none;"></video>
+            <img id="result-image" alt="Generated image">
+        </div>
+        <div class="results-actions">
+            <button id="download-button">Download</button>
+            <button id="save-creation-button" disabled>Save Creation</button>
+            <button id="share-button" disabled>Share</button>
+            <button id="view-creation-button" disabled>View Creation</button>
+        </div>
+    </div>
+    
+    <div id="daily-prompts-container" style="display: none;">
+        <div class="daily-prompts-header">
+            <h2>Daily Prompts</h2>
+            <button id="refresh-prompts-button" title="Get new prompts">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 132 28.5T720-690v-110h80v280H520v-80h168q-32-54-87-87t-121-33q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 142-45t98-125h82q-34 100-118.5 165T480-160Z"/></svg>
+            </button>
+        </div>
+        <div id="daily-prompts-gallery"></div>
+    </div>
+</main>
+
+<div id="error-modal" class="modal-overlay">
+  <div class="modal-content">
+    <h3>Error</h3>
+    <div id="error-message-container">
+        <p>An unexpected error occurred.</p>
+    </div>
+    <div class="modal-actions">
+      <button id="modal-close-button">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="subscription-modal" class="modal-overlay">
+  <div class="modal-content premium-modal-content">
+    <div id="plan-selection-view">
+        <div class="premium-modal-header">
+            <svg class="premium-modal-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z"/></svg>
+            Go Premium
+        </div>
+        <p>Unlock unlimited downloads, save your creations, and enjoy an ad-free experience!</p>
+        <div id="pricing-plans-container">
+            <div class="pricing-plan" data-plan="monthly">
+                <div>
+                    <h4 class="plan-title">Monthly Plan</h4>
+                    <p class="plan-price">$9.99 / month</p>
+                </div>
+                <svg class="plan-checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            </div>
+            <div class="pricing-plan" data-plan="yearly">
+                <div>
+                    <h4 class="plan-title">Yearly Plan</h4>
+                    <p class="plan-price">$99.99 / year (Save 16%)</p>
+                </div>
+                <svg class="plan-checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            </div>
+        </div>
+        <button id="continue-payment-button">
+            <svg class="payment-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm-1 14H5c-.55 0-1-.45-1-1v-5h16v5c0 .55-.45 1-1 1zm1-10H4V6h16v2z"/></svg>
+            <span>Continue</span>
+        </button>
+    </div>
+
+    <div id="payment-selection-view" style="display: none;">
+        <h4 class="payment-view-header">Complete Your Purchase</h4>
+        <p id="selected-plan-info"></p>
+        
+        <div id="modal-cards-list-container">
+            <!-- Radio list of cards will be injected here -->
+        </div>
+        <button id="modal-add-card-button" class="settings-utility-button" style="width: 100%; margin-bottom: 1rem;">
+            + Add New Payment Method
+        </button>
+
+        <form id="modal-add-card-form" class="settings-form" style="display:none;">
+             <div class="card-preview" style="transform: scale(0.9); margin-bottom: 1rem;">
+                <div id="modal-card-preview-type-logo"></div>
+                <div class="card-preview-chip"></div>
+                <div id="modal-card-preview-number" class="card-preview-text">•••• •••• •••• ••••</div>
+                <div class="card-preview-details">
+                    <div>
+                        <small>Card Holder</small>
+                        <div id="modal-card-preview-name">CARDHOLDER NAME</div>
+                    </div>
+                    <div>
+                        <small>Expires</small>
+                        <div id="modal-card-preview-expiry">MM/YY</div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <input type="text" id="modal-card-number-input" required inputmode="numeric" maxlength="19" placeholder="Card Number">
+            </div>
+            <div class="form-group">
+                <input type="text" id="modal-card-holder-input" required placeholder="Card Holder Name">
+            </div>
+            <div class="form-group-row">
+                <div class="form-group">
+                    <input type="text" id="modal-card-expiry-input" required placeholder="MM/YY" maxlength="5">
+                </div>
+                <div class="form-group">
+                    <input type="text" id="modal-card-cvv-input" required inputmode="numeric" maxlength="4" placeholder="CVV">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="toggle-switch-label" style="justify-content: flex-start; gap: 0.75rem; font-weight: 400; font-size: 0.9rem;">
+                    <input type="checkbox" id="modal-set-card-default-checkbox" checked>
+                    <span>Save for future payments</span>
+                </label>
+            </div>
+            <div class="form-actions" style="margin-top: 0.5rem;">
+                <button type="button" id="modal-cancel-add-card-button" class="settings-utility-button">Cancel</button>
+                <button type="submit" class="settings-save-button">Save Card</button>
+            </div>
+        </form>
+        
+        <div class="modal-actions" style="margin-top: 1.5rem;">
+            <button id="back-to-plans-button" class="settings-utility-button">Back</button>
+            <button id="confirm-payment-button" class="auth-button"></button>
+        </div>
+    </div>
+      <div id="payment-message-container"></div>
+      <button id="subscription-modal-close-button">Maybe later</button>
+  </div>
+</div>
+
+<div id="settings-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 800px; padding: 1.5rem 2rem;">
+    <h3 style="text-align: left; margin-bottom: 1rem;">Settings</h3>
+    <div id="settings-content">
+        <nav class="settings-nav">
+            <button class="settings-nav-link active" data-pane="profile">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                <span>Profile</span>
+            </button>
+            <button class="settings-nav-link" data-pane="password">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6z"/></svg>
+                <span>Password & Security</span>
+            </button>
+            <button class="settings-nav-link" data-pane="subscription">
+                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm-1 14H5c-.55 0-1-.45-1-1v-5h16v5c0 .55-.45 1-1 1zm1-10H4V6h16v2z"/></svg>
+                <span>Subscription & Payments</span>
+            </button>
+             <button class="settings-nav-link" data-pane="generation">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5c-5.25 0-9.5 4.25-9.5 9.5s4.25 9.5 9.5 9.5 9.5-4.25 9.5-9.5S17.25 2.5 12 2.5zm-3.6 5.1L12 9.7l3.6-2.1 2.1 3.6-2.1 3.6-3.6 2.1-3.6-2.1-2.1-3.6 2.1-3.6zm5.7 6.3l1.5-2.6-2.6-1.5-1.5 2.6 2.6 1.5z"/></svg>
+                <span>Generation</span>
+            </button>
+            <button class="settings-nav-link" data-pane="notifications">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                <span>Notifications</span>
+            </button>
+             <button class="settings-nav-link" data-pane="appearance">
+                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.64-.11 2.4-.31-.31-.62-.5-1.3-.5-2.02 0-2.21 1.79-4 4-4 .72 0 1.4.19 2.02.5.2-.76.31-1.57.31-2.4 0-4.97-4.03-9-9-9z"/></svg>
+                <span>Appearance</span>
+            </button>
+            <button class="settings-nav-link" data-pane="privacy">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                <span>Privacy & Data</span>
+            </button>
+        </nav>
+        <div class="settings-panes">
+            <!-- Profile Pane -->
+            <div class="settings-pane active" id="pane-profile">
+                <h3>Profile</h3>
+                <form id="profile-form" class="settings-form">
+                    <p class="form-group-description">This information is displayed publicly on your shared creations.</p>
+                    <div class="profile-picture-container">
+                      <img id="profile-picture-preview" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2EwYTBiMiIgd2lkdGg9IjgwcHgiIGhlaWdodD0iODBweCI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==" alt="Profile Avatar">
+                      <label for="profile-picture-input" class="profile-picture-label">Change Photo</label>
+                      <input type="file" id="profile-picture-input" class="sr-only" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                      <label for="profile-name-input">Name</label>
+                      <input type="text" id="profile-name-input" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="profile-bio-input">Bio</label>
+                      <textarea id="profile-bio-input" rows="3" placeholder="Tell us about yourself"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="settings-save-button">Save Profile</button>
+                    </div>
+                </form>
+                <form id="links-form" class="settings-form">
+                    <h4 class="settings-subheader">Social Links</h4>
+                    <div class="form-group social-input-group">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z"/></svg>
+                      <input type="url" id="facebook-link-input" placeholder="https://facebook.com/username">
+                    </div>
+                    <div class="form-group social-input-group">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                      <input type="url" id="x-link-input" placeholder="https://x.com/username">
+                    </div>
+                    <div class="form-group social-input-group">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2m-.2 2A3.6 3.6 0 0 0 4 7.6v8.8C4 18.39 5.61 20 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6C20 5.61 18.39 4 16.4 4H7.6m9.65 1.5a1.25 1.25 0 0 1 1.25 1.25A1.25 1.25 0 0 1 17.25 8 1.25 1.25 0 0 1 16 6.75a1.25 1.25 0 0 1 1.25-1.25M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></svg>
+                      <input type="url" id="instagram-link-input" placeholder="https://instagram.com/username">
+                    </div>
+                    <div class="form-actions">
+                         <button type="submit" class="settings-save-button">Save Links</button>
+                    </div>
+                </form>
+            </div>
+            <!-- Password Pane -->
+            <div class="settings-pane" id="pane-password">
+                <h3>Password & Security</h3>
+                <form id="password-form" class="settings-form">
+                    <p class="form-group-description">For your security, we recommend using a strong, unique password.</p>
+                    <div class="form-group">
+                        <label for="current-password-input">Current Password</label>
+                        <input type="password" id="current-password-input" required>
+                    </div>
+                    <div class="form-group-row">
+                        <div class="form-group">
+                            <label for="new-password-input">New Password</label>
+                            <input type="password" id="new-password-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm-password-input">Confirm New Password</label>
+                            <input type="password" id="confirm-password-input" required>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="settings-save-button">Update Password</button>
+                    </div>
+                </form>
+            </div>
+            <!-- Subscription & Payments Pane -->
+            <div class="settings-pane" id="pane-subscription">
+                <h3>Subscription & Payments</h3>
+                <div id="subscription-status-container"></div>
+                <div id="payment-methods-view">
+                    <h4 class="settings-subheader">Payment Methods</h4>
+                    <div id="saved-cards-list"></div>
+                    <div class="form-actions">
+                        <button id="add-new-card-button" class="settings-utility-button">Add New Card</button>
+                    </div>
+                </div>
+                 <form id="add-card-form" class="settings-form" style="display:none;">
+                    <h4 class="settings-subheader">Add a New Card</h4>
+                    <div class="card-preview">
+                        <div id="card-preview-type-logo"></div>
+                        <div class="card-preview-chip"></div>
+                        <div id="card-preview-number" class="card-preview-text">•••• •••• •••• ••••</div>
+                        <div class="card-preview-details">
+                            <div>
+                                <small>Card Holder</small>
+                                <div id="card-preview-name">CARDHOLDER NAME</div>
+                            </div>
+                            <div>
+                                <small>Expires</small>
+                                <div id="card-preview-expiry">MM/YY</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="card-number-input">Card Number</label>
+                        <input type="text" id="card-number-input" required inputmode="numeric" maxlength="19">
+                    </div>
+                    <div class="form-group">
+                        <label for="card-holder-input">Card Holder Name</label>
+                        <input type="text" id="card-holder-input" required>
+                    </div>
+                    <div class="form-group-row">
+                        <div class="form-group">
+                            <label for="card-expiry-input">Expiry Date</label>
+                            <input type="text" id="card-expiry-input" required placeholder="MM/YY" maxlength="5">
+                        </div>
+                        <div class="form-group">
+                            <label for="card-cvv-input">CVV</label>
+                            <input type="text" id="card-cvv-input" required inputmode="numeric" maxlength="4">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                         <label class="toggle-switch-label" style="justify-content: flex-start; gap: 0.75rem; font-weight: 400;">
+                            <input type="checkbox" id="set-card-default-checkbox">
+                            <span>Set as default payment method</span>
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="cancel-add-card-button" class="settings-utility-button">Cancel</button>
+                        <button type="submit" class="settings-save-button">Save Card</button>
+                    </div>
+                </form>
+            </div>
+            <!-- Generation Pane -->
+            <div class="settings-pane" id="pane-generation">
+                 <h3>Generation Settings</h3>
+                <form id="generation-settings-form" class="settings-form">
+                    <p class="form-group-description">These settings affect the output of your generated videos and images.</p>
+                     <div class="form-group">
+                        <label for="setting-video-quality">Default Video Quality</label>
+                        <select id="setting-video-quality">
+                            <option value="standard">Standard</option>
+                            <option value="hd">HD (High Definition)</option>
+                        </select>
+                    </div>
+                     <div class="form-group">
+                        <label for="setting-image-aspect-ratio">Default Image Aspect Ratio</label>
+                        <select id="setting-image-aspect-ratio">
+                            <option value="1:1">1:1 (Square)</option>
+                            <option value="16:9">16:9 (Widescreen)</option>
+                            <option value="9:16">9:16 (Vertical)</option>
+                            <option value="4:3">4:3 (Landscape)</option>
+                            <option value="3:4">3:4 (Portrait)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="setting-image-format">Default Image Format</label>
+                        <select id="setting-image-format">
+                            <option value="image/jpeg">JPEG</option>
+                            <option value="image/png">PNG</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="watermark-setting-container">
+                        <label class="toggle-switch-label">
+                            <span>Apply Watermark (Free Users)</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="setting-watermark-toggle">
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+                        <small>As a Premium user, your creations are always watermark-free.</small>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="settings-save-button">Save Generation Settings</button>
+                    </div>
+                </form>
+            </div>
+            <!-- Notifications Pane -->
+            <div class="settings-pane" id="pane-notifications">
+                <h3>Notifications</h3>
+                <form id="notifications-form" class="settings-form">
+                    <p class="form-group-description">Choose how you want to be notified about important events.</p>
+                    <div class="form-group">
+                        <label class="toggle-switch-label">
+                            <span>Feature Updates & Offers</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="setting-notifications-features" checked>
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="toggle-switch-label">
+                            <span>Export & Download Alerts</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="setting-notifications-exports" checked>
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+                    </div>
+                     <div class="form-group">
+                        <label class="toggle-switch-label">
+                            <span>Community News & Events</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="setting-notifications-community" checked>
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                         <button type="submit" class="settings-save-button">Save Preferences</button>
+                    </div>
+                </form>
+            </div>
+             <!-- Appearance Pane -->
+            <div class="settings-pane" id="pane-appearance">
+                <h3>Appearance</h3>
+                <form id="appearance-form" class="settings-form">
+                     <p class="form-group-description">Customize the look and feel of the application.</p>
+                     <div class="form-group">
+                        <label class="toggle-switch-label">
+                            <span>Enable Dark Mode</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="setting-dark-mode-toggle">
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+                    </div>
+                </form>
+                 <h4 class="settings-subheader">Language & Region</h4>
+                 <form id="language-region-form" class="settings-form">
+                     <div class="form-group">
+                        <label for="setting-language-select">Language</label>
+                        <select id="setting-language-select">
+                            <option value="en-US">English (United States)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="setting-timezone-select">Time Zone</label>
+                        <select id="setting-timezone-select">
+                            <option value="Africa/Johannesburg">Africa/Johannesburg</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                         <button type="submit" class="settings-save-button">Save Language & Region</button>
+                    </div>
+                </form>
+            </div>
+            <!-- Privacy Pane -->
+            <div class="settings-pane" id="pane-privacy">
+                <h3>Privacy & Data</h3>
+                 <div class="privacy-section">
+                    <h4>Manage Creations</h4>
+                    <small>View, organize, and delete your saved creations. This is a Premium feature.</small>
+                    <button id="manage-projects-button" class="settings-utility-button">Manage My Creations</button>
+                </div>
+                <div class="privacy-section">
+                    <h4>Clear Temporary Data</h4>
+                    <small>Clears temporary data like password reset tokens from your browser's local storage.</small>
+                    <button id="clear-cache-button" class="settings-utility-button">Clear Now</button>
+                </div>
+                <div class="privacy-section">
+                    <h4>Delete Account</h4>
+                    <small>Permanently delete your account and all associated data. This action cannot be undone.</small>
+                    <button id="delete-account-button" class="settings-utility-button danger">Delete Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-actions" style="justify-content: flex-end; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+      <button id="settings-modal-close-button" style="padding: 10px 24px;">Done</button>
+    </div>
+  </div>
+</div>
+
+<div id="creations-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 800px;">
+    <h3>My Creations</h3>
+    <div id="creations-gallery">
+      <!-- Gallery items will be populated by JS -->
+    </div>
+    <div class="modal-actions">
+      <button id="creations-modal-close-button">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="large-view-modal" class="modal-overlay" style="background-color: rgba(0,0,0,0.8);">
+    <button id="large-view-close-button">&times;</button>
+    <div class="large-view-content">
+        <img id="large-view-image" alt="Full size creation">
+        <video id="large-view-video" controls></video>
+    </div>
+</div>
+
+<div id="delete-account-modal" class="modal-overlay">
+  <div class="modal-content">
+    <h3>Delete Account</h3>
+    <p>This action is irreversible. All your data, including saved creations, will be permanently deleted. Please type your email to confirm.</p>
+    <div class="form-group" style="text-align: left;">
+      <label for="delete-confirm-input">Your Email</label>
+      <input type="email" id="delete-confirm-input" placeholder="user@example.com">
+    </div>
+    <div class="modal-actions">
+      <button id="cancel-delete-button">Cancel</button>
+      <button id="confirm-delete-button" disabled>Delete Account</button>
+    </div>
+  </div>
+</div>
+
+<div id="share-fallback-modal" class="modal-overlay">
+  <div class="modal-content">
+    <h3>Sharing Not Supported</h3>
+    <p>Your browser doesn't support direct sharing. Please download your creation to share it manually.</p>
+    <div class="modal-actions">
+      <button id="share-fallback-close-button">Got it</button>
+    </div>
+  </div>
+</div>
+
+<div id="config-error-overlay" class="modal-overlay">
+  <div class="modal-content">
+    <div class="error-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 0 24 24" width="48px" fill="#d93025"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+    </div>
+    <h3>Configuration Error</h3>
+    <p>The application is missing a required API key. Please ensure it is configured correctly and try again.</p>
+  </div>
+</div>
+
+<script type="module" src="index.js"></script>
+</body>
+</html>
