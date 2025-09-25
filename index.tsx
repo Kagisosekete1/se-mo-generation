@@ -53,6 +53,7 @@ let userState = {
 };
 let userSettings = {
     videoQuality: 'standard',
+    motionBlurStrength: 0.5,
     imageAspectRatio: '1:1',
     imageFormat: 'image/jpeg',
     watermark: true,
@@ -181,6 +182,8 @@ let facebookLinkInput: HTMLInputElement;
 let xLinkInput: HTMLInputElement;
 let instagramLinkInput: HTMLInputElement;
 let settingVideoQualitySelect: HTMLSelectElement;
+let settingMotionBlurSlider: HTMLInputElement;
+let settingMotionBlurValue: HTMLSpanElement;
 let settingImageAspectRatioSelect: HTMLSelectElement;
 let settingImageFormatSelect: HTMLSelectElement;
 let settingWatermarkToggle: HTMLInputElement;
@@ -379,6 +382,8 @@ function cacheDOMElements() {
     xLinkInput = document.querySelector('#x-link-input') as HTMLInputElement;
     instagramLinkInput = document.querySelector('#instagram-link-input') as HTMLInputElement;
     settingVideoQualitySelect = document.querySelector('#setting-video-quality') as HTMLSelectElement;
+    settingMotionBlurSlider = document.querySelector('#setting-motion-blur') as HTMLInputElement;
+    settingMotionBlurValue = document.querySelector('#setting-motion-blur-value') as HTMLSpanElement;
     settingImageAspectRatioSelect = document.querySelector('#setting-image-aspect-ratio') as HTMLSelectElement;
     settingImageFormatSelect = document.querySelector('#setting-image-format') as HTMLSelectElement;
     settingWatermarkToggle = document.querySelector('#setting-watermark-toggle') as HTMLInputElement;
@@ -803,6 +808,7 @@ function loadUserSettings() {
     const savedSettings = JSON.parse(localStorage.getItem(`settings_${currentUser}`) || '{}');
     userSettings = {
         videoQuality: savedSettings.videoQuality || 'standard',
+        motionBlurStrength: savedSettings.motionBlurStrength !== undefined ? savedSettings.motionBlurStrength : 0.5,
         imageAspectRatio: savedSettings.imageAspectRatio || '1:1',
         imageFormat: savedSettings.imageFormat || 'image/jpeg',
         watermark: savedSettings.watermark !== undefined ? savedSettings.watermark : !userState.isPremium,
@@ -1137,7 +1143,7 @@ function blobToBase64(blob: Blob) {
 
 async function generateVideoContent(prompt, imageBytes, mimeType, durationSecs, quality, aspectRatio) {
   const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
-  const config: any = { model: 'veo-2.0-generate-001', prompt, config: { numberOfVideos: 1, durationSeconds: durationSecs, quality, aspectRatio }};
+  const config: any = { model: 'veo-2.0-generate-001', prompt, config: { numberOfVideos: 1, durationSeconds: durationSecs, quality, aspectRatio, motionBlurStrength: userSettings.motionBlurStrength }};
   if (imageBytes && mimeType) config.image = { imageBytes, mimeType };
 
   let operation = await ai.models.generateVideos(config);
@@ -1407,6 +1413,19 @@ function setupSettingsNavigation() {
     });
 }
 
+function getMotionBlurLabel(value: number): string {
+    if (value === 0) return 'Off';
+    if (value <= 0.3) return 'Low';
+    if (value <= 0.7) return 'Medium';
+    return 'High';
+}
+
+function updateMotionBlurValueDisplay(value: number) {
+    if (settingMotionBlurValue) {
+        settingMotionBlurValue.textContent = `${getMotionBlurLabel(value)} (${value.toFixed(1)})`;
+    }
+}
+
 function openSettingsModal() {
     if (!settingsModal || !currentUser) return;
     
@@ -1429,6 +1448,10 @@ function openSettingsModal() {
 
     // Populate Generation Settings
     if (settingVideoQualitySelect) settingVideoQualitySelect.value = userSettings.videoQuality;
+    if (settingMotionBlurSlider) {
+        settingMotionBlurSlider.value = String(userSettings.motionBlurStrength);
+        updateMotionBlurValueDisplay(userSettings.motionBlurStrength);
+    }
     if (settingImageAspectRatioSelect) settingImageAspectRatioSelect.value = userSettings.imageAspectRatio;
     if (settingImageFormatSelect) settingImageFormatSelect.value = userSettings.imageFormat;
     if (settingWatermarkToggle) {
@@ -1550,6 +1573,7 @@ function handleLinksUpdate(e: Event) {
 function handleGenerationSettingsUpdate(e: Event) {
     e.preventDefault();
     userSettings.videoQuality = settingVideoQualitySelect.value;
+    userSettings.motionBlurStrength = parseFloat(settingMotionBlurSlider.value);
     userSettings.imageAspectRatio = settingImageAspectRatioSelect.value;
     userSettings.imageFormat = settingImageFormatSelect.value;
     userSettings.watermark = settingWatermarkToggle.checked;
@@ -2488,6 +2512,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if(passwordForm) passwordForm.addEventListener('submit', handlePasswordUpdate);
     if(linksForm) linksForm.addEventListener('submit', handleLinksUpdate);
     if(generationSettingsForm) generationSettingsForm.addEventListener('submit', handleGenerationSettingsUpdate);
+    if (settingMotionBlurSlider) {
+        settingMotionBlurSlider.addEventListener('input', () => {
+            updateMotionBlurValueDisplay(parseFloat(settingMotionBlurSlider.value));
+        });
+    }
     if(notificationsForm) notificationsForm.addEventListener('submit', handleNotificationsUpdate);
     if(appearanceForm) appearanceForm.addEventListener('submit', (e) => e.preventDefault()); // Handled by toggle
     if(languageRegionForm) languageRegionForm.addEventListener('submit', handleLanguageRegionUpdate);
