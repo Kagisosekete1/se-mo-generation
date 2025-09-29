@@ -1666,6 +1666,106 @@ function handleMyCreationsClick() {
     showCreationsGallery();
 }
 
+function showCreationsGallery() {
+    if (!currentUser || !creationsGallery) return;
+    const creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
+    creationsGallery.innerHTML = '';
+
+    if (creations.length === 0) {
+        creationsGallery.innerHTML = '<p>You have no saved creations yet.</p>';
+    } else {
+        creations.forEach((creation: any) => {
+            const card = document.createElement('div');
+            card.className = 'creation-card';
+            card.dataset.id = String(creation.id); // Store ID on the element
+            card.draggable = true; // Make it draggable
+            
+            let mediaEl: HTMLImageElement | HTMLVideoElement;
+            if (creation.type === 'video') {
+                mediaEl = document.createElement('video');
+                mediaEl.muted = true; // Mute videos in gallery
+                mediaEl.preload = 'metadata';
+                // Asynchronously fetch and set the video source for reliable playback
+                fetch(creation.data)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        if (mediaEl instanceof HTMLVideoElement) {
+                           mediaEl.src = URL.createObjectURL(blob);
+                        }
+                    })
+                    .catch(e => console.error(`Failed to load video creation ${creation.id}:`, e));
+            } else {
+                mediaEl = document.createElement('img');
+                mediaEl.src = creation.data;
+                mediaEl.alt = creation.prompt;
+            }
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'creation-overlay';
+            overlay.innerHTML = `
+                <div class="creation-actions">
+                    <button class="view-btn" title="View Full Size"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></button>
+                    <button class="rename-btn" title="Rename"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.26 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29zm-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z"/></svg></button>
+                    <button class="delete-btn" title="Delete"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg></button>
+                </div>`;
+
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'creation-info';
+            infoDiv.innerHTML = `<p class="creation-prompt">${creation.prompt || 'Untitled'}</p>`;
+
+            overlay.querySelector('.view-btn')?.addEventListener('click', () => {
+                currentCreation = creation;
+                showLargeView();
+            });
+            overlay.querySelector('.rename-btn')?.addEventListener('click', () => renameCreation(creation.id));
+            overlay.querySelector('.delete-btn')?.addEventListener('click', () => deleteCreation(creation.id));
+            
+            card.addEventListener('dragstart', (e) => {
+                card.classList.add('dragging');
+                if (e.dataTransfer) {
+                    e.dataTransfer.setData('text/plain', String(creation.id));
+                    e.dataTransfer.effectAllowed = 'move';
+                }
+            });
+            
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+            });
+            
+            card.appendChild(mediaEl);
+            card.appendChild(overlay);
+            card.appendChild(infoDiv);
+            creationsGallery.appendChild(card);
+        });
+    }
+
+    if (creationsModal) creationsModal.style.display = 'flex';
+}
+
+function deleteCreation(id: number) {
+    if (!currentUser || !confirm('Are you sure you want to delete this creation?')) return;
+    let creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
+    creations = creations.filter((c: any) => c.id !== id);
+    localStorage.setItem(`creations_${currentUser}`, JSON.stringify(creations));
+    showCreationsGallery(); // Refresh the view
+}
+
+function renameCreation(id: number) {
+    if (!currentUser) return;
+    let creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
+    const creationIndex = creations.findIndex((c: any) => c.id === id);
+    if (creationIndex === -1) return;
+
+    const currentPrompt = creations[creationIndex].prompt;
+    const newPrompt = window.prompt(`Enter a new name or prompt for this creation:`, currentPrompt);
+    
+    if (newPrompt && newPrompt.trim() !== '') {
+        creations[creationIndex].prompt = newPrompt.trim();
+        localStorage.setItem(`creations_${currentUser}`, JSON.stringify(creations));
+        showCreationsGallery(); // Refresh view
+    }
+}
+
 function handleDownload() {
     if (!userState.isPremium && userState.downloadsToday >= MAX_FREE_DOWNLOADS) {
         if (subscriptionModal) subscriptionModal.style.display = 'flex';
@@ -1775,106 +1875,6 @@ async function handleShare() {
             console.error('Error sharing:', error);
             showErrorModal(['Please try again or download the file to share it manually.'], 'Sharing failed.');
         }
-    }
-}
-
-function showCreationsGallery() {
-    if (!currentUser || !creationsGallery) return;
-    const creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
-    creationsGallery.innerHTML = '';
-
-    if (creations.length === 0) {
-        creationsGallery.innerHTML = '<p>You have no saved creations yet.</p>';
-    } else {
-        creations.forEach(creation => {
-            const card = document.createElement('div');
-            card.className = 'creation-card';
-            card.dataset.id = String(creation.id); // Store ID on the element
-            card.draggable = true; // Make it draggable
-            
-            let mediaEl: HTMLImageElement | HTMLVideoElement;
-            if (creation.type === 'video') {
-                mediaEl = document.createElement('video');
-                mediaEl.muted = true; // Mute videos in gallery
-                mediaEl.preload = 'metadata';
-                // Asynchronously fetch and set the video source for reliable playback
-                fetch(creation.data)
-                    .then(res => res.blob())
-                    .then(blob => {
-                        if (mediaEl instanceof HTMLVideoElement) {
-                           mediaEl.src = URL.createObjectURL(blob);
-                        }
-                    })
-                    .catch(e => console.error(`Failed to load video creation ${creation.id}:`, e));
-            } else {
-                mediaEl = document.createElement('img');
-                mediaEl.src = creation.data;
-                mediaEl.alt = creation.prompt;
-            }
-            
-            const overlay = document.createElement('div');
-            overlay.className = 'creation-overlay';
-            overlay.innerHTML = `
-                <div class="creation-actions">
-                    <button class="view-btn" title="View Full Size"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></button>
-                    <button class="rename-btn" title="Rename"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.26 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29zm-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z"/></svg></button>
-                    <button class="delete-btn" title="Delete"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg></button>
-                </div>`;
-
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'creation-info';
-            infoDiv.innerHTML = `<p class="creation-prompt">${creation.prompt || 'Untitled'}</p>`;
-
-            overlay.querySelector('.view-btn')?.addEventListener('click', () => {
-                currentCreation = creation;
-                showLargeView();
-            });
-            overlay.querySelector('.rename-btn')?.addEventListener('click', () => renameCreation(creation.id));
-            overlay.querySelector('.delete-btn')?.addEventListener('click', () => deleteCreation(creation.id));
-            
-            card.addEventListener('dragstart', (e) => {
-                card.classList.add('dragging');
-                if (e.dataTransfer) {
-                    e.dataTransfer.setData('text/plain', String(creation.id));
-                    e.dataTransfer.effectAllowed = 'move';
-                }
-            });
-            
-            card.addEventListener('dragend', () => {
-                card.classList.remove('dragging');
-            });
-            
-            card.appendChild(mediaEl);
-            card.appendChild(overlay);
-            card.appendChild(infoDiv);
-            creationsGallery.appendChild(card);
-        });
-    }
-
-    if (creationsModal) creationsModal.style.display = 'flex';
-}
-
-function deleteCreation(id: number) {
-    if (!currentUser || !confirm('Are you sure you want to delete this creation?')) return;
-    let creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
-    creations = creations.filter(c => c.id !== id);
-    localStorage.setItem(`creations_${currentUser}`, JSON.stringify(creations));
-    showCreationsGallery(); // Refresh the view
-}
-
-function renameCreation(id: number) {
-    if (!currentUser) return;
-    let creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
-    const creationIndex = creations.findIndex(c => c.id === id);
-    if (creationIndex === -1) return;
-
-    const currentPrompt = creations[creationIndex].prompt;
-    const newPrompt = window.prompt(`Enter a new name or prompt for this creation:`, currentPrompt);
-    
-    if (newPrompt && newPrompt.trim() !== '') {
-        creations[creationIndex].prompt = newPrompt.trim();
-        localStorage.setItem(`creations_${currentUser}`, JSON.stringify(creations));
-        showCreationsGallery(); // Refresh view
     }
 }
 
@@ -2167,7 +2167,7 @@ function renderSavedCards() {
         return;
     }
 
-    cards.forEach(card => {
+    cards.forEach((card: any) => {
         let logoUrl = '';
         const cardTypeLower = card.type.toLowerCase();
         if (cardTypeLower === 'visa') {
@@ -2220,7 +2220,7 @@ function handleSaveCard(e: Event) {
 
     let cards = users[currentUser].paymentMethods || [];
     if (newCard.isDefault) {
-        cards.forEach(c => c.isDefault = false);
+        cards.forEach((c: any) => c.isDefault = false);
     }
     cards.push(newCard);
 
@@ -2237,7 +2237,7 @@ function handleSetDefaultCard(cardId: number) {
     const users = JSON.parse(localStorage.getItem('users') || '{}');
     if (!users[currentUser]?.paymentMethods) return;
 
-    users[currentUser].paymentMethods.forEach(card => {
+    users[currentUser].paymentMethods.forEach((card: any) => {
         card.isDefault = card.id === cardId;
     });
 
@@ -2250,10 +2250,10 @@ function handleDeleteCard(cardId: number) {
     const users = JSON.parse(localStorage.getItem('users') || '{}');
     if (!users[currentUser]?.paymentMethods) return;
 
-    users[currentUser].paymentMethods = users[currentUser].paymentMethods.filter(card => card.id !== cardId);
+    users[currentUser].paymentMethods = users[currentUser].paymentMethods.filter((card: any) => card.id !== cardId);
 
     // If the deleted card was the default, make another one default if possible
-    if (users[currentUser].paymentMethods.length > 0 && !users[currentUser].paymentMethods.some(c => c.isDefault)) {
+    if (users[currentUser].paymentMethods.length > 0 && !users[currentUser].paymentMethods.some((c: any) => c.isDefault)) {
         users[currentUser].paymentMethods[0].isDefault = true;
     }
 
