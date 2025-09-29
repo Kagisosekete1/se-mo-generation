@@ -2,7 +2,7 @@
 /**
  * @license
  * Copyright 2025 Google LLC
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License: Apache-2.0
  */
 import {GoogleGenAI, Modality} from '@google/genai';
 
@@ -124,11 +124,11 @@ let examplePromptsSelect: HTMLSelectElement;
 let videoAspectRatioSelect: HTMLSelectElement;
 let upload: HTMLInputElement;
 let fileNameDisplay: HTMLSpanElement;
+let fileInputLabel: HTMLLabelElement;
 
 // Preview Elements
 let previewContainer: HTMLDivElement;
 let imagePreview: HTMLImageElement;
-let videoPreview: HTMLVideoElement;
 let clearPreviewButton: HTMLButtonElement;
 
 
@@ -316,11 +316,11 @@ function cacheDOMElements() {
     videoAspectRatioSelect = document.querySelector('#aspect-ratio-select') as HTMLSelectElement;
     upload = document.querySelector('#file-input') as HTMLInputElement;
     fileNameDisplay = document.querySelector('#file-name-display') as HTMLSpanElement;
+    fileInputLabel = document.querySelector('#file-input-label') as HTMLLabelElement;
 
     // Preview
     previewContainer = document.querySelector('#preview-container') as HTMLDivElement;
     imagePreview = document.querySelector('#image-preview') as HTMLImageElement;
-    videoPreview = document.querySelector('#video-preview') as HTMLVideoElement;
     clearPreviewButton = document.querySelector('#clear-preview-button') as HTMLButtonElement;
 
 
@@ -1032,11 +1032,13 @@ function handleGenerationTypeChange(event: Event) {
         if (imageSettings) imageSettings.style.display = 'none';
         if (generateButton) generateButton.textContent = 'Generate Video';
         if (downloadButton) downloadButton.textContent = 'Download Video';
+        if (fileInputLabel) fileInputLabel.textContent = 'Conditioning Image (Optional)';
     } else { // image
         if (videoSettings) videoSettings.style.display = 'none';
         if (imageSettings) imageSettings.style.display = 'block';
         if (generateButton) generateButton.textContent = 'Generate Image';
         if (downloadButton) downloadButton.textContent = 'Download Image';
+        if (fileInputLabel) fileInputLabel.textContent = 'Input Image (Optional for editing)';
     }
 }
 
@@ -1045,11 +1047,6 @@ function clearPreview() {
     if (imagePreview) {
         imagePreview.src = '';
         imagePreview.style.display = 'none';
-    }
-    if (videoPreview) {
-        videoPreview.pause();
-        videoPreview.src = '';
-        videoPreview.style.display = 'none';
     }
     if (upload) upload.value = ''; // Reset file input
     if (fileNameDisplay) fileNameDisplay.textContent = 'No file chosen';
@@ -1075,7 +1072,6 @@ async function handleFileUpload(e: Event) {
     if (fileNameDisplay) fileNameDisplay.textContent = file.name;
   
     const isImage = file.type.startsWith('image/');
-    const isVideo = file.type.startsWith('video/');
 
     if (isImage) {
       // Images can be used for both image and video generation
@@ -1087,40 +1083,14 @@ async function handleFileUpload(e: Event) {
         imagePreview.src = URL.createObjectURL(file);
         imagePreview.style.display = 'block';
       }
-      if (videoPreview) {
-        videoPreview.style.display = 'none';
-        videoPreview.pause();
-        videoPreview.src = '';
-      }
       
       const modeText = generationType === 'image' ? 'for editing' : 'for video generation';
       if (statusEl) statusEl.textContent = `Image loaded ${modeText}.`;
       if (generateButton) generateButton.disabled = currentPromptText.trim() === '';
-    } else if (isVideo) {
-      // Videos are only for preview, and only in video generation mode.
-      if (generationType === 'video') {
-        if (previewContainer) previewContainer.style.display = 'block';
-        base64data = '';
-        mimeType = '';
-        
-        if (videoPreview) {
-          videoPreview.src = URL.createObjectURL(file);
-          videoPreview.style.display = 'block';
-        }
-        if (imagePreview) {
-          imagePreview.style.display = 'none';
-          imagePreview.src = '';
-        }
-        
-        if (statusEl) statusEl.textContent = 'Video input is for preview only and not supported for generation.';
-        if (generateButton) generateButton.disabled = true;
-      } else { // Trying to drop a video in image mode
-        clearPreview();
-        if (statusEl) statusEl.textContent = 'Unsupported file. Please upload an image for image editing.';
-      }
     } else {
       clearPreview();
-      if (statusEl) statusEl.textContent = 'Unsupported file type.';
+      if (statusEl) statusEl.textContent = 'Unsupported file. Please upload an image.';
+      showErrorModal(['Only image files are supported.'], 'Unsupported File Type');
     }
 }
 
@@ -1906,8 +1876,7 @@ function hideLargeView() {
 }
 
 function setControlsDisabled(disabled: boolean) {
-    const isVideoUploaded = videoPreview && videoPreview.style.display === 'block';
-    if (generateButton) generateButton.disabled = disabled || currentPromptText.trim() === '' || isVideoUploaded;
+    if (generateButton) generateButton.disabled = disabled || currentPromptText.trim() === '';
     if (aiAssistButton) aiAssistButton.disabled = disabled || currentPromptText.trim() === '';
     if (upload) upload.disabled = disabled;
     if (promptEl) promptEl.disabled = disabled;
@@ -2368,10 +2337,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const files = e.dataTransfer?.files;
             if (files && files.length > 0) {
-                // Assign the dropped files to the file input and dispatch a 'change' event
-                // to trigger the existing handleFileUpload logic.
-                upload.files = files;
-                upload.dispatchEvent(new Event('change', { bubbles: true }));
+                const imageFile = Array.from(files).find(file => file.type.startsWith('image/'));
+
+                if (imageFile) {
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(imageFile);
+                    upload.files = dataTransfer.files;
+                    upload.dispatchEvent(new Event('change', { bubbles: true }));
+                } else {
+                    showErrorModal(["Only image files can be dropped here."], "Unsupported File Type");
+                }
             } else {
                 console.warn('No files were dropped.');
             }
@@ -2400,8 +2375,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (promptEl) {
         promptEl.addEventListener('input', () => {
             currentPromptText = promptEl.value;
-            const isVideoUploaded = videoPreview && videoPreview.style.display === 'block';
-            if(generateButton) generateButton.disabled = currentPromptText.trim() === '' || isVideoUploaded;
+            if(generateButton) generateButton.disabled = currentPromptText.trim() === '';
             if(aiAssistButton) aiAssistButton.disabled = currentPromptText.trim() === '';
         });
     }
