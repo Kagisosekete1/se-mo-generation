@@ -108,6 +108,12 @@
 </div>
 
 <main style="display:none;">
+    <div id="drag-drop-overlay">
+        <div class="drag-drop-content">
+            <svg xmlns="http://www.w3.org/2000/svg" height="64px" viewBox="0 -960 960 960" width="64px"><path d="M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
+            <span>Drop your image or video here</span>
+        </div>
+    </div>
     <header class="main-header">
         <div id="user-status-container">
             <span id="user-status"></span>
@@ -194,6 +200,13 @@
                     <span id="duration-value">5s</span>
                 </label>
                 <input type="range" id="duration-slider" min="2" max="15" value="5" aria-labelledby="duration-value">
+            </div>
+            <div class="setting">
+                <label for="quality-select">Quality</label>
+                <select id="quality-select">
+                    <option value="standard">Standard</option>
+                    <option value="hd">HD</option>
+                </select>
             </div>
             <div class="setting">
               <label for="aspect-ratio-select">Aspect Ratio</label>
