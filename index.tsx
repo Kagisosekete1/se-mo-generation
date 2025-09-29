@@ -1,3 +1,4 @@
+
 /* tslint:disable */
 /**
  * @license
@@ -622,9 +623,7 @@ function handleRegister(e: Event) {
             avatar: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2EwYTBiMiIgd2lkdGg9IjgwcHgiIGhlaWdodD0iODBweCI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==',
             links: { facebook: '', x: '', instagram: '' }
         },
-        paymentMethods: [
-            { id: Date.now(), type: 'Visa', maskedNumber: '1234', holderName: name, isDefault: true }
-        ]
+        paymentMethods: []
     };
     localStorage.setItem('users', JSON.stringify(users));
     
