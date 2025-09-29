@@ -1,4 +1,3 @@
-
 /* tslint:disable */
 /**
  * @license
@@ -227,10 +226,6 @@ let modalCardsListContainer: HTMLDivElement;
 let modalAddCardButton: HTMLButtonElement;
 let modalAddCardForm: HTMLFormElement;
 let confirmPaymentButton: HTMLButtonElement;
-let modalCardPreviewNumber: HTMLDivElement;
-let modalCardPreviewName: HTMLDivElement;
-let modalCardPreviewExpiry: HTMLDivElement;
-let modalCardPreviewTypeLogo: HTMLDivElement;
 let modalCardNumberInput: HTMLInputElement;
 let modalCardHolderInput: HTMLInputElement;
 let modalCardExpiryInput: HTMLInputElement;
@@ -245,10 +240,6 @@ let savedCardsList: HTMLDivElement;
 let addNewCardButton: HTMLButtonElement;
 let addCardForm: HTMLFormElement;
 let cancelAddCardButton: HTMLButtonElement;
-let cardPreviewNumber: HTMLDivElement;
-let cardPreviewName: HTMLDivElement;
-let cardPreviewExpiry: HTMLDivElement;
-let cardPreviewTypeLogo: HTMLDivElement;
 let cardNumberInput: HTMLInputElement;
 let cardHolderInput: HTMLInputElement;
 let cardExpiryInput: HTMLInputElement;
@@ -428,10 +419,6 @@ function cacheDOMElements() {
     modalAddCardButton = document.querySelector('#modal-add-card-button') as HTMLButtonElement;
     modalAddCardForm = document.querySelector('#modal-add-card-form') as HTMLFormElement;
     confirmPaymentButton = document.querySelector('#confirm-payment-button') as HTMLButtonElement;
-    modalCardPreviewNumber = document.querySelector('#modal-card-preview-number') as HTMLDivElement;
-    modalCardPreviewName = document.querySelector('#modal-card-preview-name') as HTMLDivElement;
-    modalCardPreviewExpiry = document.querySelector('#modal-card-preview-expiry') as HTMLDivElement;
-    modalCardPreviewTypeLogo = document.querySelector('#modal-card-preview-type-logo') as HTMLDivElement;
     modalCardNumberInput = document.querySelector('#modal-card-number-input') as HTMLInputElement;
     modalCardHolderInput = document.querySelector('#modal-card-holder-input') as HTMLInputElement;
     modalCardExpiryInput = document.querySelector('#modal-card-expiry-input') as HTMLInputElement;
@@ -446,10 +433,6 @@ function cacheDOMElements() {
     addNewCardButton = document.querySelector('#add-new-card-button') as HTMLButtonElement;
     addCardForm = document.querySelector('#add-card-form') as HTMLFormElement;
     cancelAddCardButton = document.querySelector('#cancel-add-card-button') as HTMLButtonElement;
-    cardPreviewNumber = document.querySelector('#card-preview-number') as HTMLDivElement;
-    cardPreviewName = document.querySelector('#card-preview-name') as HTMLDivElement;
-    cardPreviewExpiry = document.querySelector('#card-preview-expiry') as HTMLDivElement;
-    cardPreviewTypeLogo = document.querySelector('#card-preview-type-logo') as HTMLDivElement;
     cardNumberInput = document.querySelector('#card-number-input') as HTMLInputElement;
     cardHolderInput = document.querySelector('#card-holder-input') as HTMLInputElement;
     cardExpiryInput = document.querySelector('#card-expiry-input') as HTMLInputElement;
@@ -943,7 +926,6 @@ function populateModalCardsList() {
         modalCardsListContainer.style.display = 'none';
         modalAddCardButton.style.display = 'none';
         modalAddCardForm.style.display = 'block';
-        updateModalCardPreview(); // Reset preview
     }
 }
 
@@ -2055,55 +2037,10 @@ function toggleAddCardView(showForm: boolean) {
         paymentMethodsView.style.display = 'none';
         addCardForm.style.display = 'block';
         addCardForm.reset();
-        updateCardPreview(); // Reset preview
     } else {
         paymentMethodsView.style.display = 'block';
         addCardForm.style.display = 'none';
     }
-}
-
-function updateCardPreview() {
-    const cardNumber = cardNumberInput.value.replace(/\s/g, '');
-    cardPreviewNumber.textContent = cardNumberInput.value || '•••• •••• •••• ••••';
-    cardPreviewName.textContent = cardHolderInput.value.toUpperCase() || 'CARDHOLDER NAME';
-    cardPreviewExpiry.textContent = cardExpiryInput.value || 'MM/YY';
-
-    let cardType = '';
-    if (cardNumber.startsWith('4')) {
-        cardType = 'visa';
-    } else if (cardNumber.startsWith('5')) {
-        cardType = 'mastercard';
-    }
-
-    let logoUrl = '';
-    if (cardType === 'visa') {
-        logoUrl = 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg';
-    } else if (cardType === 'mastercard') {
-        logoUrl = 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg';
-    }
-    cardPreviewTypeLogo.style.backgroundImage = logoUrl ? `url('${logoUrl}')` : '';
-}
-
-function updateModalCardPreview() {
-    const cardNumber = modalCardNumberInput.value.replace(/\s/g, '');
-    modalCardPreviewNumber.textContent = modalCardNumberInput.value || '•••• •••• •••• ••••';
-    modalCardPreviewName.textContent = modalCardHolderInput.value.toUpperCase() || 'CARDHOLDER NAME';
-    modalCardPreviewExpiry.textContent = modalCardExpiryInput.value || 'MM/YY';
-
-    let cardType = '';
-    if (cardNumber.startsWith('4')) {
-        cardType = 'visa';
-    } else if (cardNumber.startsWith('5')) {
-        cardType = 'mastercard';
-    }
-
-    let logoUrl = '';
-    if (cardType === 'visa') {
-        logoUrl = 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg';
-    } else if (cardType === 'mastercard') {
-        logoUrl = 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg';
-    }
-    modalCardPreviewTypeLogo.style.backgroundImage = logoUrl ? `url('${logoUrl}')` : '';
 }
 
 function formatCardNumber(e: Event) {
@@ -2111,11 +2048,6 @@ function formatCardNumber(e: Event) {
     let value = input.value.replace(/\D/g, '');
     value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
     input.value = value;
-    if (input.id === 'card-number-input') {
-        updateCardPreview();
-    } else {
-        updateModalCardPreview();
-    }
 }
 
 function formatExpiry(e: Event) {
@@ -2125,11 +2057,6 @@ function formatExpiry(e: Event) {
         value = value.substring(0, 2) + '/' + value.substring(2, 4);
     }
     input.value = value;
-     if (input.id === 'card-expiry-input') {
-        updateCardPreview();
-    } else {
-        updateModalCardPreview();
-    }
 }
 
 function renderSubscriptionStatus() {
@@ -2607,8 +2534,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(modalAddCardForm) modalAddCardForm.addEventListener('submit', handleSaveCardInModal);
     if(modalCardNumberInput) modalCardNumberInput.addEventListener('input', formatCardNumber);
     if(modalCardExpiryInput) modalCardExpiryInput.addEventListener('input', formatExpiry);
-    if(modalCardHolderInput) modalCardHolderInput.addEventListener('input', updateModalCardPreview);
-    if(modalCardCvvInput) modalCardCvvInput.addEventListener('input', updateModalCardPreview);
 
     // Settings Modal Logic
     setupSettingsNavigation();
@@ -2649,12 +2574,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addNewCardButton) addNewCardButton.addEventListener('click', () => toggleAddCardView(true));
     if (cancelAddCardButton) cancelAddCardButton.addEventListener('click', () => toggleAddCardView(false));
     if (addCardForm) addCardForm.addEventListener('submit', handleSaveCard);
-    ['input', 'change'].forEach(evt => {
-        if(cardNumberInput) cardNumberInput.addEventListener(evt, formatCardNumber);
-        if(cardHolderInput) cardHolderInput.addEventListener(evt, updateCardPreview);
-        if(cardExpiryInput) cardExpiryInput.addEventListener(evt, formatExpiry);
-        if(cardCvvInput) cardCvvInput.addEventListener(evt, updateCardPreview);
-    });
+    if(cardNumberInput) cardNumberInput.addEventListener('input', formatCardNumber);
+    if(cardExpiryInput) cardExpiryInput.addEventListener('input', formatExpiry);
     
     // Creations Gallery Drag & Drop
     if (creationsGallery) {
