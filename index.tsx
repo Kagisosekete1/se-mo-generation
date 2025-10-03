@@ -34,6 +34,7 @@ const ALL_PROMPTS = [
     'A high-speed chase sequence with futuristic motorcycles on a highway in the clouds.',
 ];
 const DAILY_PROMPTS_COUNT = 5;
+const CREATIONS_PER_PAGE = 12;
 
 
 // --- App State ---
@@ -75,6 +76,7 @@ let selectedPremiumPlan: 'monthly' | 'yearly' | null = null;
 let base64data = '';
 let mimeType = '';
 let currentPromptText = '';
+let creationsCurrentPage = 1;
 
 // --- DOM Elements ---
 let mainContent: HTMLElement;
@@ -152,6 +154,10 @@ let settingsModalCloseButton: HTMLButtonElement;
 let creationsModal: HTMLDivElement;
 let creationsModalCloseButton: HTMLButtonElement;
 let creationsGallery: HTMLDivElement;
+let creationsPaginationControls: HTMLDivElement;
+let creationsPrevPageButton: HTMLButtonElement;
+let creationsNextPageButton: HTMLButtonElement;
+let creationsPageInfo: HTMLSpanElement;
 let shareFallbackModal: HTMLDivElement;
 let shareFallbackCloseButton: HTMLButtonElement;
 
@@ -344,6 +350,10 @@ function cacheDOMElements() {
     creationsModal = document.querySelector('#creations-modal') as HTMLDivElement;
     creationsModalCloseButton = document.querySelector('#creations-modal-close-button') as HTMLButtonElement;
     creationsGallery = document.querySelector('#creations-gallery') as HTMLDivElement;
+    creationsPaginationControls = document.querySelector('#creations-pagination-controls') as HTMLDivElement;
+    creationsPrevPageButton = document.querySelector('#creations-prev-page') as HTMLButtonElement;
+    creationsNextPageButton = document.querySelector('#creations-next-page') as HTMLButtonElement;
+    creationsPageInfo = document.querySelector('#creations-page-info') as HTMLSpanElement;
     shareFallbackModal = document.querySelector('#share-fallback-modal') as HTMLDivElement;
     shareFallbackCloseButton = document.querySelector('#share-fallback-close-button') as HTMLButtonElement;
 
@@ -1614,6 +1624,7 @@ function handleMyCreationsClick() {
         if (subscriptionModal) subscriptionModal.style.display = 'flex';
         return;
     }
+    creationsCurrentPage = 1; // Reset to the first page when opening
     showCreationsGallery();
 }
 
@@ -1622,10 +1633,16 @@ function showCreationsGallery() {
     const creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
     creationsGallery.innerHTML = '';
 
+    const totalPages = Math.ceil(creations.length / CREATIONS_PER_PAGE);
+    const startIndex = (creationsCurrentPage - 1) * CREATIONS_PER_PAGE;
+    const endIndex = startIndex + CREATIONS_PER_PAGE;
+    const paginatedCreations = creations.slice(startIndex, endIndex);
+
     if (creations.length === 0) {
         creationsGallery.innerHTML = '<p>You have no saved creations yet.</p>';
+        if (creationsPaginationControls) creationsPaginationControls.style.display = 'none';
     } else {
-        creations.forEach((creation: any) => {
+        paginatedCreations.forEach((creation: any) => {
             const card = document.createElement('div');
             card.className = 'creation-card';
             card.dataset.id = String(creation.id); // Store ID on the element
@@ -1688,6 +1705,12 @@ function showCreationsGallery() {
             card.appendChild(infoDiv);
             creationsGallery.appendChild(card);
         });
+
+        // Update pagination controls
+        if (creationsPaginationControls) creationsPaginationControls.style.display = 'flex';
+        if (creationsPageInfo) creationsPageInfo.textContent = `Page ${creationsCurrentPage} of ${totalPages}`;
+        if (creationsPrevPageButton) creationsPrevPageButton.disabled = creationsCurrentPage === 1;
+        if (creationsNextPageButton) creationsNextPageButton.disabled = creationsCurrentPage === totalPages;
     }
 
     if (creationsModal) creationsModal.style.display = 'flex';
@@ -1758,18 +1781,35 @@ function saveCreation() {
     }
     if (!currentUser || !currentCreation.data) return;
 
-    const creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
-    creations.unshift({ // Add to the beginning
-        id: Date.now(),
-        type: currentCreation.type,
-        data: currentCreation.data,
-        prompt: currentPromptText,
-    });
-    localStorage.setItem(`creations_${currentUser}`, JSON.stringify(creations));
-    if (saveCreationButton) saveCreationButton.textContent = 'Saved!';
-    setTimeout(() => { 
-        if (saveCreationButton) saveCreationButton.textContent = 'Save Creation'; 
-    }, 2000);
+    try {
+        const creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
+        creations.unshift({ // Add to the beginning
+            id: Date.now(),
+            type: currentCreation.type,
+            data: currentCreation.data,
+            prompt: currentPromptText,
+        });
+        localStorage.setItem(`creations_${currentUser}`, JSON.stringify(creations));
+        
+        if (saveCreationButton) saveCreationButton.textContent = 'Saved!';
+        setTimeout(() => { 
+            if (saveCreationButton) saveCreationButton.textContent = 'Save Creation'; 
+        }, 2000);
+
+    } catch (e) {
+        if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+            showErrorModal(
+                [
+                    'Your local storage is full, which means you have saved a very large number of creations.',
+                    'Please delete some older creations from the "My Creations" gallery to make space for new ones.'
+                ], 
+                'Storage Full'
+            );
+        } else {
+            console.error('Failed to save creation:', e);
+            showErrorModal([(e as Error).message], 'Save Failed');
+        }
+    }
 }
 
 function showShareFallbackModal() {
@@ -2241,333 +2281,3 @@ function setupCustomVideoPlayer() {
     });
     
     video.addEventListener('play', updatePlayButton);
-    video.addEventListener('pause', updatePlayButton);
-    
-    video.addEventListener('volumechange', updateVolume);
-
-    playPauseBtn.addEventListener('click', togglePlay);
-    progressBar.addEventListener('input', (e) => {
-        video.currentTime = Number((e.target as HTMLInputElement).value);
-    });
-
-    volumeBtn.addEventListener('click', toggleMute);
-    volumeSlider.addEventListener('input', (e) => {
-        const volume = Number((e.target as HTMLInputElement).value);
-        video.muted = volume === 0;
-        video.volume = volume;
-    });
-
-    speedOptionsContainer.querySelectorAll('button').forEach(btn => {
-        btn.addEventListener('click', () => {
-            changePlaybackSpeed(Number(btn.dataset.speed));
-        });
-    });
-
-    fullscreenBtn.addEventListener('click', toggleFullScreen);
-    document.addEventListener('fullscreenchange', updateFullscreenButton);
-    
-    // Initialize
-    updatePlayButton();
-    updateVolume();
-}
-
-// --- Event Listeners & Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
-    cacheDOMElements();
-
-    // --- Configuration Check ---
-    if (!GEMINI_API_KEY) {
-        console.error('Gemini API key is not configured.');
-        const configErrorModal = document.querySelector('#config-error-overlay');
-        
-        // Hide splash screen immediately to show the error
-        if (splashScreen) {
-            splashScreen.style.display = 'none';
-        }
-        
-        if (configErrorModal) {
-            (configErrorModal as HTMLElement).style.display = 'flex';
-        }
-        // Stop further execution
-        return;
-    }
-
-    // --- Splash Screen Logic ---
-    setTimeout(() => {
-        if (splashScreen) {
-            splashScreen.classList.add('hidden');
-            splashScreen.addEventListener('transitionend', () => {
-                if(splashScreen) splashScreen.style.display = 'none';
-            });
-        }
-    }, 1500); // Simulate loading time
-    
-    // --- Drag and Drop Listeners ---
-    if (mainContent && upload) {
-        let dragCounter = 0;
-
-        mainContent.addEventListener('dragenter', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dragCounter++;
-            if (dragCounter === 1) { // Only add class on first enter
-                mainContent.classList.add('drag-over');
-            }
-        });
-
-        mainContent.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.stopPropagation(); // This is crucial to allow dropping
-        });
-
-        mainContent.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dragCounter--;
-            if (dragCounter === 0) { // Only remove class on final leave
-               mainContent.classList.remove('drag-over');
-            }
-        });
-
-        mainContent.addEventListener('drop', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dragCounter = 0; // Reset counter
-            mainContent.classList.remove('drag-over');
-
-            const files = e.dataTransfer?.files;
-            if (files && files.length > 0) {
-                const imageFile = Array.from(files).find(file => file.type.startsWith('image/'));
-
-                if (imageFile) {
-                    const dataTransfer = new DataTransfer();
-                    dataTransfer.items.add(imageFile);
-                    upload.files = dataTransfer.files;
-                    upload.dispatchEvent(new Event('change', { bubbles: true }));
-                } else {
-                    showErrorModal(["Only image files can be dropped here."], "Unsupported File Type");
-                }
-            } else {
-                console.warn('No files were dropped.');
-            }
-        });
-    }
-
-    // --- Auth Listeners ---
-    if(loginForm) loginForm.addEventListener('submit', handleLogin);
-    if(registerForm) registerForm.addEventListener('submit', handleRegister);
-    if(forgotPasswordForm) forgotPasswordForm.addEventListener('submit', handleForgotPasswordRequest);
-    if(resetPasswordForm) resetPasswordForm.addEventListener('submit', handlePasswordReset);
-    if(authToggleLink) authToggleLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        const mode = (e.target as HTMLElement).dataset.mode as 'login' | 'register' | 'forgot';
-        switchAuthView(mode);
-    });
-    if (forgotPasswordLink) forgotPasswordLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        switchAuthView('forgot');
-    });
-    setupAuthLegalTabs();
-    
-    // --- Main UI Listeners ---
-    if (generateButton) generateButton.addEventListener('click', generate);
-    if (aiAssistButton) aiAssistButton.addEventListener('click', handleAiAssist);
-    if (promptEl) {
-        promptEl.addEventListener('input', () => {
-            currentPromptText = promptEl.value;
-            if(generateButton) generateButton.disabled = currentPromptText.trim() === '';
-            if(aiAssistButton) aiAssistButton.disabled = currentPromptText.trim() === '';
-        });
-    }
-
-    if(durationSlider && durationValue) {
-        durationSlider.addEventListener('input', (e) => {
-            durationValue.textContent = `${(e.target as HTMLInputElement).value}s`;
-        });
-    }
-
-    if(qualitySelect) {
-        qualitySelect.addEventListener('change', (e) => {
-            userSettings.videoQuality = (e.target as HTMLSelectElement).value;
-        });
-    }
-    
-    if (imageAspectRatioSelect) {
-        imageAspectRatioSelect.addEventListener('change', (e) => {
-            userSettings.imageAspectRatio = (e.target as HTMLSelectElement).value;
-        });
-    }
-
-    if (imageFormatSelect) {
-        imageFormatSelect.addEventListener('change', (e) => {
-            userSettings.imageFormat = (e.target as HTMLSelectElement).value;
-        });
-    }
-
-    if(examplePromptsSelect && promptEl) {
-        examplePromptsSelect.addEventListener('change', (e) => {
-            const selectedPrompt = (e.target as HTMLSelectElement).value;
-            if (selectedPrompt) {
-                promptEl.value = selectedPrompt;
-                promptEl.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        });
-    }
-    
-    if (upload) upload.addEventListener('change', handleFileUpload);
-    if (clearPreviewButton) clearPreviewButton.addEventListener('click', clearPreview);
-    
-    generationTypeRadios.forEach(radio => {
-        radio.addEventListener('change', handleGenerationTypeChange);
-    });
-
-    if (downloadButton) downloadButton.addEventListener('click', handleDownload);
-    if (saveCreationButton) saveCreationButton.addEventListener('click', saveCreation);
-    if (viewCreationButton) viewCreationButton.addEventListener('click', showLargeView);
-    if (shareButton) shareButton.addEventListener('click', handleShare);
-    if (largeViewCloseButton) largeViewCloseButton.addEventListener('click', hideLargeView);
-
-    // Profile Dropdown
-    if (profileButton) {
-        profileButton.addEventListener('click', () => {
-            if (profileDropdown) {
-                profileDropdown.style.display = profileDropdown.style.display === 'block' ? 'none' : 'block';
-            }
-        });
-    }
-    
-    // Close dropdown if clicking outside
-    document.addEventListener('click', (event) => {
-        if (profileContainer && !profileContainer.contains(event.target as Node) && profileDropdown) {
-            profileDropdown.style.display = 'none';
-        }
-    });
-    
-    if (logoutButton) logoutButton.addEventListener('click', handleLogout);
-    if (settingsButton) {
-        settingsButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            openSettingsModal();
-        });
-    }
-    if (myCreationsButton) {
-        myCreationsButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            handleMyCreationsClick();
-        });
-    }
-
-    // Modal Close Buttons
-    if (modalCloseButton) modalCloseButton.addEventListener('click', () => {
-        if (errorModal) errorModal.style.display = 'none';
-    });
-    if (subscriptionModalCloseButton) subscriptionModalCloseButton.addEventListener('click', () => {
-        if (subscriptionModal) subscriptionModal.style.display = 'none';
-    });
-    if(settingsModalCloseButton) settingsModalCloseButton.addEventListener('click', () => {
-        if (settingsModal) settingsModal.style.display = 'none';
-    });
-    if (creationsModalCloseButton) creationsModalCloseButton.addEventListener('click', () => {
-        if(creationsModal) creationsModal.style.display = 'none';
-    });
-    if (shareFallbackCloseButton) shareFallbackCloseButton.addEventListener('click', () => {
-        if (shareFallbackModal) shareFallbackModal.style.display = 'none';
-    });
-    
-    // Daily Prompts
-    if (refreshPromptsButton) {
-        refreshPromptsButton.addEventListener('click', fetchNewDailyPrompts);
-    }
-    
-    // Subscription Modal Logic
-    if (subscribeButton) subscribeButton.addEventListener('click', () => {
-        if (subscriptionModal) subscriptionModal.style.display = 'flex';
-    });
-    if(userStatusEl) userStatusEl.addEventListener('click', (e) => {
-        if ((e.target as HTMLElement).classList.contains('upgrade-cta')) {
-             if (subscriptionModal) subscriptionModal.style.display = 'flex';
-        }
-    });
-    pricingPlans.forEach(plan => {
-        plan.addEventListener('click', () => handlePlanSelection(plan as HTMLDivElement));
-    });
-    if (continuePaymentButton) continuePaymentButton.addEventListener('click', showPaymentSelectionView);
-    if (backToPlansButton) backToPlansButton.addEventListener('click', () => {
-        if (planSelectionView) planSelectionView.style.display = 'block';
-        if (paymentSelectionView) paymentSelectionView.style.display = 'none';
-    });
-    if (confirmPaymentButton) confirmPaymentButton.addEventListener('click', handleConfirmPayment);
-    if (modalAddCardButton) modalAddCardButton.addEventListener('click', () => {
-        if (modalAddCardForm) modalAddCardForm.style.display = 'block';
-        if (modalAddCardButton) modalAddCardButton.style.display = 'none';
-    });
-    if (modalCancelAddCardButton) modalCancelAddCardButton.addEventListener('click', () => {
-        if (modalAddCardForm) modalAddCardForm.style.display = 'none';
-        if (modalAddCardButton) modalAddCardButton.style.display = 'block';
-    });
-    if(modalAddCardForm) modalAddCardForm.addEventListener('submit', handleSaveCardInModal);
-    if(modalCardNumberInput) modalCardNumberInput.addEventListener('input', formatCardNumber);
-    if(modalCardExpiryInput) modalCardExpiryInput.addEventListener('input', formatExpiry);
-
-    // Settings Modal Logic
-    setupSettingsNavigation();
-    if (profileForm) profileForm.addEventListener('submit', handleProfileUpdate);
-    if (profilePictureInput) profilePictureInput.addEventListener('change', handleAvatarChange);
-    if (passwordForm) passwordForm.addEventListener('submit', handlePasswordUpdate);
-    if (linksForm) linksForm.addEventListener('submit', handleLinksUpdate);
-    if (generationSettingsForm) generationSettingsForm.addEventListener('submit', handleGenerationSettingsUpdate);
-    if (settingMotionBlurSlider) settingMotionBlurSlider.addEventListener('input', (e) => updateMotionBlurValueDisplay(parseFloat((e.target as HTMLInputElement).value)));
-    if (notificationsForm) notificationsForm.addEventListener('submit', handleNotificationsUpdate);
-    if (settingDarkModeToggle) settingDarkModeToggle.addEventListener('change', (e) => {
-        userSettings.theme = (e.target as HTMLInputElement).checked ? 'dark' : 'light';
-        saveUserSettings();
-        applyTheme();
-    });
-    if (languageRegionForm) languageRegionForm.addEventListener('submit', handleLanguageRegionUpdate);
-    if (creatorProgramForm) creatorProgramForm.addEventListener('submit', handleCreatorApplication);
-    
-    // Privacy & Data
-    if (manageProjectsButton) manageProjectsButton.addEventListener('click', handleMyCreationsClick);
-    if (clearCacheButton) clearCacheButton.addEventListener('click', handleClearCache);
-    if (deleteAccountButton) deleteAccountButton.addEventListener('click', () => {
-        if (deleteAccountModal) deleteAccountModal.style.display = 'flex';
-    });
-    if (cancelDeleteButton) cancelDeleteButton.addEventListener('click', () => {
-        if (deleteAccountModal) deleteAccountModal.style.display = 'none';
-        if(deleteConfirmInput) deleteConfirmInput.value = '';
-    });
-    if (deleteConfirmInput && confirmDeleteButton) {
-        deleteConfirmInput.addEventListener('input', () => {
-            confirmDeleteButton.disabled = deleteConfirmInput.value !== currentUser;
-        });
-    }
-    if (confirmDeleteButton) confirmDeleteButton.addEventListener('click', handleAccountDeletion);
-
-
-    // Payments Settings
-    if (addNewCardButton) addNewCardButton.addEventListener('click', () => toggleAddCardView(true));
-    if (cancelAddCardButton) cancelAddCardButton.addEventListener('click', () => toggleAddCardView(false));
-    if (addCardForm) addCardForm.addEventListener('submit', handleSaveCard);
-    if(cardNumberInput) cardNumberInput.addEventListener('input', formatCardNumber);
-    if(cardExpiryInput) cardExpiryInput.addEventListener('input', formatExpiry);
-    
-    // Creations Gallery Drag & Drop
-    if (creationsGallery) {
-        creationsGallery.addEventListener('dragover', e => {
-            e.preventDefault();
-            const afterElement = getDragAfterElement(creationsGallery, e.clientY);
-            const dragging = document.querySelector('.dragging');
-            if (dragging) {
-                if (afterElement == null) {
-                    creationsGallery.appendChild(dragging);
-                } else {
-                    creationsGallery.insertBefore(dragging, afterElement);
-                }
-            }
-        });
-    }
-
-    // --- Final Setup ---
-    checkAuthStatus();
-    setupCustomVideoPlayer();
-});
