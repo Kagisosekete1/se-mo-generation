@@ -2076,16 +2076,123 @@ function openCreationsModal(showLast: boolean = false) {
     creationsModal.style.display = 'flex';
 }
 
-// ... Add more missing functions and finally the init block
-
 function setupEventListeners() {
-    // This function will connect all the UI elements to their JavaScript handlers
+    // --- Auth ---
+    if (loginForm) loginForm.addEventListener('submit', handleLogin);
+    if (registerForm) registerForm.addEventListener('submit', handleRegister);
+    if (forgotPasswordForm) forgotPasswordForm.addEventListener('submit', handleForgotPasswordRequest);
+    if (resetPasswordForm) resetPasswordForm.addEventListener('submit', handlePasswordReset);
+    if (authToggleLink) authToggleLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchAuthView(authToggleLink.dataset.mode as any);
+    });
+    if (forgotPasswordLink) forgotPasswordLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchAuthView('forgot');
+    });
+    setupAuthLegalTabs();
+
+    // --- Main UI & Generation ---
+    if (generateButton) generateButton.addEventListener('click', generate);
+    if (aiAssistButton) aiAssistButton.addEventListener('click', handleAiAssist);
+    if (promptEl) promptEl.addEventListener('input', (e) => {
+        currentPromptText = (e.target as HTMLTextAreaElement).value;
+        if (generateButton) generateButton.disabled = currentPromptText.trim() === '' && !base64data;
+        if (aiAssistButton) aiAssistButton.disabled = currentPromptText.trim() === '';
+    });
+    if (examplePromptsSelect) examplePromptsSelect.addEventListener('change', (e) => {
+        const value = (e.target as HTMLSelectElement).value;
+        if (value && promptEl) {
+            promptEl.value = value;
+            promptEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    });
+    generationTypeRadios.forEach(radio => {
+        radio.addEventListener('change', handleGenerationTypeChange);
+    });
+    if (upload) upload.addEventListener('change', handleFileUpload);
+    if (clearPreviewButton) clearPreviewButton.addEventListener('click', clearPreview);
+    if (durationSlider) durationSlider.addEventListener('input', (e) => {
+        if (durationValue) durationValue.textContent = `${(e.target as HTMLInputElement).value}s`;
+    });
+    
+    // --- Results Actions ---
+    if (downloadButton) downloadButton.addEventListener('click', handleDownload);
+    if (saveCreationButton) saveCreationButton.addEventListener('click', handleSaveCreation);
+    if (shareButton) shareButton.addEventListener('click', handleShare);
+    if (viewCreationButton) viewCreationButton.addEventListener('click', () => openCreationsModal(true));
+
+    // --- Daily Prompts ---
+    if (refreshPromptsButton) refreshPromptsButton.addEventListener('click', populateDailyPrompts);
+
+    // --- Profile & Modals ---
+    if (profileButton) profileButton.addEventListener('click', () => {
+        if(profileDropdown) profileDropdown.style.display = profileDropdown.style.display === 'block' ? 'none' : 'block';
+    });
+    document.addEventListener('click', (e) => {
+        if (profileContainer && !profileContainer.contains(e.target as Node)) {
+            if (profileDropdown) profileDropdown.style.display = 'none';
+        }
+    });
+    if (logoutButton) logoutButton.addEventListener('click', handleLogout);
+    if (settingsButton) settingsButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        openSettingsModal();
+        if(profileDropdown) profileDropdown.style.display = 'none';
+    });
+    if (myCreationsButton) myCreationsButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        openCreationsModal();
+        if(profileDropdown) profileDropdown.style.display = 'none';
+    });
+    
+    // --- Modal Close Buttons ---
+    if(modalCloseButton) modalCloseButton.addEventListener('click', () => { if(errorModal) errorModal.style.display = 'none' });
+    if(subscriptionModalCloseButton) subscriptionModalCloseButton.addEventListener('click', () => { if(subscriptionModal) subscriptionModal.style.display = 'none' });
+    if(settingsModalCloseButton) settingsModalCloseButton.addEventListener('click', () => { if(settingsModal) settingsModal.style.display = 'none' });
+    if(creationsModalCloseButton) creationsModalCloseButton.addEventListener('click', () => { if(creationsModal) creationsModal.style.display = 'none' });
+    if(largeViewCloseButton) largeViewCloseButton.addEventListener('click', () => { if(largeViewModal) largeViewModal.style.display = 'none' });
+    if(shareFallbackCloseButton) shareFallbackCloseButton.addEventListener('click', () => { if(shareFallbackModal) shareFallbackModal.style.display = 'none' });
+    if(videoEditorCloseButton) videoEditorCloseButton.addEventListener('click', () => { if(videoEditorModal) videoEditorModal.style.display = 'none'; });
+
+    // --- Settings Listeners ---
+    setupSettingsNavigation();
+    if (profileForm) profileForm.addEventListener('submit', handleProfileUpdate);
+    if (profilePictureInput) profilePictureInput.addEventListener('change', handleAvatarChange);
+    if (linksForm) linksForm.addEventListener('submit', handleLinksUpdate);
+    if (passwordForm) passwordForm.addEventListener('submit', handlePasswordUpdate);
+    if (generationSettingsForm) generationSettingsForm.addEventListener('submit', handleGenerationSettingsUpdate);
+    if (settingMotionBlurSlider) settingMotionBlurSlider.addEventListener('input', (e) => updateMotionBlurValueDisplay(parseFloat((e.target as HTMLInputElement).value)));
+    if (notificationsForm) notificationsForm.addEventListener('submit', handleNotificationsUpdate);
+    if (settingDarkModeToggle) settingDarkModeToggle.addEventListener('change', handleThemeToggle);
+    if (languageRegionForm) languageRegionForm.addEventListener('submit', handleLanguageRegionUpdate);
+    if (creatorProgramForm) creatorProgramForm.addEventListener('submit', handleCreatorApplication);
+    if (deleteAccountButton) deleteAccountButton.addEventListener('click', () => { if(deleteAccountModal) deleteAccountModal.style.display = 'flex'; });
+    if (cancelDeleteButton) cancelDeleteButton.addEventListener('click', () => {
+        if(deleteAccountModal) deleteAccountModal.style.display = 'none';
+        if(deleteConfirmInput) deleteConfirmInput.value = '';
+    });
+    if (deleteConfirmInput) deleteConfirmInput.addEventListener('input', () => {
+        if(confirmDeleteButton) confirmDeleteButton.disabled = deleteConfirmInput.value !== currentUser;
+    });
+    if (confirmDeleteButton) confirmDeleteButton.addEventListener('click', handleDeleteAccount);
+    
+    // --- Creations Gallery ---
+    if(creationsPrevPageButton) creationsPrevPageButton.addEventListener('click', () => renderCreations(creationsCurrentPage - 1));
+    if(creationsNextPageButton) creationsNextPageButton.addEventListener('click', () => renderCreations(creationsCurrentPage + 1));
+    if(deleteSelectedButton) deleteSelectedButton.addEventListener('click', () => {
+        const selectedCheckboxes = creationsGallery.querySelectorAll<HTMLInputElement>('.creation-checkbox:checked');
+        const idsToDelete = Array.from(selectedCheckboxes).map(cb => parseInt(cb.dataset.id || '0'));
+        if (idsToDelete.length > 0 && confirm(`Are you sure you want to delete ${idsToDelete.length} selected creations?`)) {
+            deleteCreations(idsToDelete);
+        }
+    });
 }
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     cacheDOMElements();
-    // setupEventListeners(); // This will be fully implemented later
+    setupEventListeners();
     
     // Simulate loading time for splash screen
     setTimeout(() => {
