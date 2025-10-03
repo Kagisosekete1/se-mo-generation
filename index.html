@@ -728,6 +728,19 @@
     <div id="creations-gallery">
       <!-- Gallery items will be populated by JS -->
     </div>
+    <div id="creations-selection-toolbar" style="display: none;">
+        <span id="selection-count"></span>
+        <div class="selection-actions">
+            <button id="edit-selected-button" class="settings-utility-button">
+                <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 141-28-28 57 57-29-29Z"/></svg>
+                <span>Edit</span>
+            </button>
+            <button id="delete-selected-button" class="settings-utility-button danger">
+                <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
+                <span>Delete</span>
+            </button>
+        </div>
+    </div>
     <div id="creations-pagination-controls" style="display: none;">
       <button id="creations-prev-page" class="settings-utility-button">&lt; Previous</button>
       <span id="creations-page-info"></span>
@@ -779,6 +792,49 @@
     </div>
     <h3>Configuration Error</h3>
     <p>The application is missing a required API key. Please ensure it is configured correctly and try again.</p>
+  </div>
+</div>
+
+<div id="video-editor-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 90vw; max-height: 90vh; height: 90vh; width: 90vw; display: flex; flex-direction: column;">
+    <div class="editor-header">
+        <h3>Video Editor</h3>
+        <div class="editor-main-actions">
+            <button id="export-video-button" class="settings-save-button">Export Video</button>
+            <button id="video-editor-close-button" class="settings-utility-button">Close</button>
+        </div>
+    </div>
+    <div class="editor-layout">
+        <div class="editor-preview-panel">
+            <video id="editor-preview-video" controls></video>
+        </div>
+        <div class="editor-timeline-panel">
+            <div id="clip-editor-panel" style="display: none;">
+                <h4 id="clip-editor-title">Edit Clip</h4>
+                <div class="trim-controls">
+                    <label>Trim</label>
+                    <div class="trim-time-inputs">
+                        <input type="text" id="trim-start-time" aria-label="Start time">
+                        <span>-</span>
+                        <input type="text" id="trim-end-time" aria-label="End time">
+                    </div>
+                </div>
+                <div class="speed-controls">
+                    <label>Playback Speed</label>
+                    <div class="speed-buttons">
+                        <button data-speed="0.5">0.5x</button>
+                        <button data-speed="1" class="active">1x</button>
+                        <button data-speed="1.5">1.5x</button>
+                        <button data-speed="2">2x</button>
+                    </div>
+                </div>
+            </div>
+            <h4>Timeline</h4>
+            <div id="editor-timeline" class="timeline-container">
+                <!-- Timeline clips will be populated by JS -->
+            </div>
+        </div>
+    </div>
   </div>
 </div>
 

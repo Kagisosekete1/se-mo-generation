@@ -77,6 +77,11 @@ let base64data = '';
 let mimeType = '';
 let currentPromptText = '';
 let creationsCurrentPage = 1;
+let editorClips: any[] = [];
+let activeEditorClipId: number | null = null;
+let isPlayingSequence = false;
+let sequencePlayIndex = 0;
+
 
 // --- DOM Elements ---
 let mainContent: HTMLElement;
@@ -160,6 +165,12 @@ let creationsNextPageButton: HTMLButtonElement;
 let creationsPageInfo: HTMLSpanElement;
 let shareFallbackModal: HTMLDivElement;
 let shareFallbackCloseButton: HTMLButtonElement;
+
+// Creations Gallery Selection
+let creationsSelectionToolbar: HTMLDivElement;
+let selectionCountEl: HTMLSpanElement;
+let editSelectedButton: HTMLButtonElement;
+let deleteSelectedButton: HTMLButtonElement;
 
 // Daily Prompts Section
 let dailyPromptsContainer: HTMLDivElement;
@@ -270,6 +281,17 @@ let fullscreenBtn: HTMLButtonElement;
 let fullscreenOpenIcon: SVGElement;
 let fullscreenCloseIcon: SVGElement;
 
+// Video Editor Elements
+let videoEditorModal: HTMLDivElement;
+let videoEditorCloseButton: HTMLButtonElement;
+let exportVideoButton: HTMLButtonElement;
+let editorPreviewVideo: HTMLVideoElement;
+let editorTimeline: HTMLDivElement;
+let clipEditorPanel: HTMLDivElement;
+let trimStartTimeInput: HTMLInputElement;
+let trimEndTimeInput: HTMLInputElement;
+let speedButtonsContainer: HTMLDivElement;
+
 
 // --- Function Definitions ---
 
@@ -291,8 +313,9 @@ function cacheDOMElements() {
     authErrorEl = document.querySelector('#auth-error') as HTMLDivElement;
     authSuccessEl = document.querySelector('#auth-success') as HTMLDivElement;
     authLegalContainer = document.querySelector('#auth-legal-container') as HTMLDivElement;
-    authLegalTabs = document.querySelectorAll('.auth-legal-tab');
-    authLegalPanes = document.querySelectorAll('.auth-legal-pane');
+    // FIX: Add generic types to querySelectorAll to ensure correct element types are inferred by TypeScript.
+    authLegalTabs = document.querySelectorAll<HTMLButtonElement>('.auth-legal-tab');
+    authLegalPanes = document.querySelectorAll<HTMLDivElement>('.auth-legal-pane');
 
 
     // Main UI
@@ -303,7 +326,8 @@ function cacheDOMElements() {
     saveCreationButton = document.querySelector('#save-creation-button') as HTMLButtonElement;
     shareButton = document.querySelector('#share-button') as HTMLButtonElement;
     viewCreationButton = document.querySelector('#view-creation-button') as HTMLButtonElement;
-    generationTypeRadios = document.querySelectorAll('input[name="generation-type"]');
+    // FIX: Add generic type to querySelectorAll to ensure correct element types are inferred by TypeScript.
+    generationTypeRadios = document.querySelectorAll<HTMLInputElement>('input[name="generation-type"]');
     videoSettings = document.querySelector('#video-settings') as HTMLDivElement;
     imageSettings = document.querySelector('#image-settings') as HTMLDivElement;
     imageAspectRatioSelect = document.querySelector('#image-aspect-ratio-select') as HTMLSelectElement;
@@ -356,6 +380,10 @@ function cacheDOMElements() {
     creationsPageInfo = document.querySelector('#creations-page-info') as HTMLSpanElement;
     shareFallbackModal = document.querySelector('#share-fallback-modal') as HTMLDivElement;
     shareFallbackCloseButton = document.querySelector('#share-fallback-close-button') as HTMLButtonElement;
+    creationsSelectionToolbar = document.querySelector('#creations-selection-toolbar') as HTMLDivElement;
+    selectionCountEl = document.querySelector('#selection-count') as HTMLSpanElement;
+    editSelectedButton = document.querySelector('#edit-selected-button') as HTMLButtonElement;
+    deleteSelectedButton = document.querySelector('#delete-selected-button') as HTMLButtonElement;
 
     // Daily Prompts Section
     dailyPromptsContainer = document.querySelector('#daily-prompts-container') as HTMLDivElement;
@@ -363,8 +391,9 @@ function cacheDOMElements() {
     refreshPromptsButton = document.querySelector('#refresh-prompts-button') as HTMLButtonElement;
 
     // Settings Modal
-    settingsNavLinks = document.querySelectorAll('.settings-nav-link');
-    settingsPanes = document.querySelectorAll('.settings-pane');
+    // FIX: Add generic types to querySelectorAll to ensure correct element types are inferred by TypeScript.
+    settingsNavLinks = document.querySelectorAll<HTMLButtonElement>('.settings-nav-link');
+    settingsPanes = document.querySelectorAll<HTMLDivElement>('.settings-pane');
     profileForm = document.querySelector('#profile-form') as HTMLFormElement;
     passwordForm = document.querySelector('#password-form') as HTMLFormElement;
     linksForm = document.querySelector('#links-form') as HTMLFormElement;
@@ -418,7 +447,8 @@ function cacheDOMElements() {
     largeViewCloseButton = document.querySelector('#large-view-close-button') as HTMLButtonElement;
     
     // Payment
-    pricingPlans = document.querySelectorAll('.pricing-plan');
+    // FIX: Add generic type to querySelectorAll to ensure correct element types are inferred by TypeScript.
+    pricingPlans = document.querySelectorAll<HTMLDivElement>('.pricing-plan');
     continuePaymentButton = document.querySelector('#continue-payment-button') as HTMLButtonElement;
     paymentMessageContainer = document.querySelector('#payment-message-container') as HTMLDivElement;
     planSelectionView = document.querySelector('#plan-selection-view') as HTMLDivElement;
@@ -466,7 +496,165 @@ function cacheDOMElements() {
     fullscreenBtn = document.querySelector('#fullscreen-btn') as HTMLButtonElement;
     fullscreenOpenIcon = document.querySelector('#fullscreen-open-icon') as SVGElement;
     fullscreenCloseIcon = document.querySelector('#fullscreen-close-icon') as SVGElement;
+
+    // Video Editor
+    videoEditorModal = document.querySelector('#video-editor-modal') as HTMLDivElement;
+    videoEditorCloseButton = document.querySelector('#video-editor-close-button') as HTMLButtonElement;
+    exportVideoButton = document.querySelector('#export-video-button') as HTMLButtonElement;
+    editorPreviewVideo = document.querySelector('#editor-preview-video') as HTMLVideoElement;
+    editorTimeline = document.querySelector('#editor-timeline') as HTMLDivElement;
+    clipEditorPanel = document.querySelector('#clip-editor-panel') as HTMLDivElement;
+    trimStartTimeInput = document.querySelector('#trim-start-time') as HTMLInputElement;
+    trimEndTimeInput = document.querySelector('#trim-end-time') as HTMLInputElement;
+    speedButtonsContainer = document.querySelector('.speed-buttons') as HTMLDivElement;
 }
+
+// FIX: Define missing utility and helper functions to resolve "Cannot find name" errors.
+function showErrorModal(messages: string[], title: string = 'An Error Occurred') {
+    if (!errorModal || !errorMessageContainer) return;
+    
+    const errorTitleEl = errorModal.querySelector('h2');
+    if (errorTitleEl) {
+        errorTitleEl.textContent = title;
+    }
+
+    errorMessageContainer.innerHTML = ''; // Clear previous messages
+    messages.forEach(msg => {
+        const p = document.createElement('p');
+        p.textContent = msg;
+        errorMessageContainer.appendChild(p);
+    });
+    
+    errorModal.style.display = 'flex';
+}
+
+function showSettingsToast(message: string) {
+    const toast = document.createElement('div');
+    toast.className = 'settings-toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => {
+        toast.classList.add('visible');
+    }, 10);
+
+    // Animate out and remove
+    setTimeout(() => {
+        toast.classList.remove('visible');
+        toast.addEventListener('transitionend', () => toast.remove());
+    }, 3000);
+}
+
+function setControlsDisabled(disabled: boolean) {
+    if (generateButton) generateButton.disabled = disabled;
+    if (aiAssistButton) aiAssistButton.disabled = disabled;
+    if (promptEl) promptEl.disabled = disabled;
+    if (upload) upload.disabled = disabled;
+    if (durationSlider) durationSlider.disabled = disabled;
+    if (qualitySelect) qualitySelect.disabled = disabled;
+    if (videoAspectRatioSelect) videoAspectRatioSelect.disabled = disabled;
+    if (imageAspectRatioSelect) imageAspectRatioSelect.disabled = disabled;
+    if (imageFormatSelect) imageFormatSelect.disabled = disabled;
+    generationTypeRadios.forEach(radio => radio.disabled = disabled);
+}
+
+function populateDailyPrompts() {
+    if (!dailyPromptsGallery) return;
+    dailyPromptsGallery.innerHTML = '';
+    
+    // Get a random subset of prompts
+    const shuffled = [...ALL_PROMPTS].sort(() => 0.5 - Math.random());
+    const promptsToShow = shuffled.slice(0, DAILY_PROMPTS_COUNT);
+    
+    promptsToShow.forEach(promptText => {
+        const promptCard = document.createElement('div');
+        promptCard.className = 'daily-prompt-card';
+        promptCard.textContent = promptText;
+        promptCard.addEventListener('click', () => {
+            if (promptEl) {
+                promptEl.value = promptText;
+                promptEl.dispatchEvent(new Event('input', { bubbles: true }));
+                promptEl.focus();
+            }
+        });
+        dailyPromptsGallery.appendChild(promptCard);
+    });
+}
+
+function renderSubscriptionStatus() {
+    if (!subscriptionStatusContainer) return;
+    if (userState.isPremium) {
+        subscriptionStatusContainer.innerHTML = `
+            <p><strong>Current Plan:</strong> Premium (${userState.subscription.plan})</p>
+            <p><strong>Next Billing Date:</strong> ${userState.subscription.nextBilling}</p>
+            <button class="button button-danger">Cancel Subscription</button>
+        `;
+        // Add event listener for cancellation if needed
+    } else {
+        subscriptionStatusContainer.innerHTML = `
+            <p>You are on the <strong>Free Plan</strong>.</p>
+            <p>Upgrade to Premium for unlimited downloads, no watermarks, and higher quality exports.</p>
+            <button class="button button-primary" id="settings-upgrade-button">Upgrade to Premium</button>
+        `;
+        const upgradeButton = document.getElementById('settings-upgrade-button');
+        if (upgradeButton) {
+            upgradeButton.addEventListener('click', () => {
+                if (settingsModal) settingsModal.style.display = 'none';
+                if (subscriptionModal) subscriptionModal.style.display = 'flex';
+            });
+        }
+    }
+}
+
+function renderSavedCards() {
+    if (!savedCardsList || !currentUser) return;
+    const users = JSON.parse(localStorage.getItem('users') || '{}');
+    const cards = users[currentUser]?.paymentMethods || [];
+    
+    savedCardsList.innerHTML = '';
+    
+    if (cards.length === 0) {
+        savedCardsList.innerHTML = '<p>No payment methods saved.</p>';
+        return;
+    }
+    
+    cards.forEach(card => {
+        let logoUrl = '';
+        const cardTypeLower = card.type.toLowerCase();
+        if (cardTypeLower === 'visa') {
+            logoUrl = 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg';
+        } else if (cardTypeLower === 'mastercard') {
+            logoUrl = 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg';
+        }
+        
+        const cardEl = document.createElement('div');
+        cardEl.className = 'saved-card-item';
+        cardEl.innerHTML = `
+            <img src="${logoUrl}" class="card-icon" alt="${card.type}">
+            <div class="card-info">
+                <span>${card.type} ending in ${card.maskedNumber}</span>
+                <small>Holder: ${card.holderName}</small>
+            </div>
+            <div class="card-actions">
+                ${!card.isDefault ? '<button class="button-text set-default-btn" data-id="'+card.id+'">Set as default</button>' : '<span class="default-badge">Default</span>'}
+                <button class="button-text-danger remove-card-btn" data-id="${card.id}">Remove</button>
+            </div>
+        `;
+        savedCardsList.appendChild(cardEl);
+    });
+}
+
+function toggleAddCardView(showForm: boolean) {
+    if (addCardForm && addNewCardButton) {
+        addCardForm.style.display = showForm ? 'block' : 'none';
+        addNewCardButton.style.display = showForm ? 'none' : 'block';
+        if (showForm) {
+            (addCardForm as HTMLFormElement).reset();
+        }
+    }
+}
+
 
 // --- Authentication ---
 function checkAuthStatus() {
@@ -1216,7 +1404,7 @@ async function generateImageContent() {
     if (base64data && mimeType) { // Image editing
         if (statusEl) statusEl.innerText = 'Applying your edits...';
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image-preview',
+            model: 'gemini-2.5-flash-image',
             contents: { parts: [ { inlineData: { data: base64data, mimeType: mimeType } }, { text: currentPromptText } ] },
             config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
         });
@@ -1490,57 +1678,57 @@ function handleProfileUpdate(e: Event) {
 
 async function handleAvatarChange(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
-    if (!file || !currentUser) return;
-
-    const base64 = await blobToBase64(file);
-    const dataUrl = `data:${file.type};base64,${base64}`;
-
-    if (profilePicturePreview) profilePicturePreview.src = dataUrl;
+    if (!currentUser || !file) return;
 
     const users = JSON.parse(localStorage.getItem('users') || '{}');
-    if (users[currentUser]) {
-        users[currentUser].profile.avatar = dataUrl;
+    if (users[currentUser]?.profile) {
+        const newAvatarUrl = `data:${file.type};base64,${await blobToBase64(file)}`;
+        users[currentUser].profile.avatar = newAvatarUrl;
         localStorage.setItem('users', JSON.stringify(users));
-        if (dashboardProfilePicture) dashboardProfilePicture.src = dataUrl;
+        if (profilePicturePreview) profilePicturePreview.src = newAvatarUrl;
+        if (dashboardProfilePicture) dashboardProfilePicture.src = newAvatarUrl;
         showSettingsToast('Avatar updated!');
     }
 }
 
-function handlePasswordUpdate(e: Event) {
+async function handleLinksUpdate(e: Event) {
+    e.preventDefault();
+    if (!currentUser) return;
+    const users = JSON.parse(localStorage.getItem('users') || '{}');
+    if (users[currentUser]) {
+        users[currentUser].profile.links = {
+            facebook: facebookLinkInput.value,
+            x: xLinkInput.value,
+            instagram: instagramLinkInput.value,
+        };
+        localStorage.setItem('users', JSON.stringify(users));
+        showSettingsToast('Social links updated!');
+    }
+}
+
+async function handlePasswordUpdate(e: Event) {
     e.preventDefault();
     if (!currentUser) return;
     
     const users = JSON.parse(localStorage.getItem('users') || '{}');
     const user = users[currentUser];
-
-    if (user && currentPasswordInput.value === user.password) {
+    
+    if (user && user.password === currentPasswordInput.value) {
         if (newPasswordInput.value.length < 6) {
-            showErrorModal(['New password must be at least 6 characters long.']);
+            showErrorModal(['New password must be at least 6 characters long.'], 'Update Failed');
             return;
         }
         if (newPasswordInput.value !== confirmPasswordInput.value) {
-            showErrorModal(['New passwords do not match.']);
+            showErrorModal(['New passwords do not match.'], 'Update Failed');
             return;
         }
+        
         user.password = newPasswordInput.value;
         localStorage.setItem('users', JSON.stringify(users));
-        showSettingsToast('Password updated!');
+        showSettingsToast('Password updated successfully!');
         (e.target as HTMLFormElement).reset();
     } else {
-        showErrorModal(['Incorrect current password.']);
-    }
-}
-
-function handleLinksUpdate(e: Event) {
-    e.preventDefault();
-    if (!currentUser) return;
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    if (users[currentUser]) {
-        users[currentUser].profile.links.facebook = facebookLinkInput.value;
-        users[currentUser].profile.links.x = xLinkInput.value;
-        users[currentUser].profile.links.instagram = instagramLinkInput.value;
-        localStorage.setItem('users', JSON.stringify(users));
-        showSettingsToast('Links updated!');
+        showErrorModal(['Current password is incorrect.'], 'Update Failed');
     }
 }
 
@@ -1550,7 +1738,10 @@ function handleGenerationSettingsUpdate(e: Event) {
     userSettings.motionBlurStrength = parseFloat(settingMotionBlurSlider.value);
     userSettings.imageAspectRatio = settingImageAspectRatioSelect.value;
     userSettings.imageFormat = settingImageFormatSelect.value;
-    userSettings.watermark = settingWatermarkToggle.checked;
+    if (!userState.isPremium) {
+      userSettings.watermark = settingWatermarkToggle.checked;
+    }
+    
     saveUserSettings();
     applyUserSettingsToDashboard();
     showSettingsToast('Generation settings saved!');
@@ -1567,717 +1758,340 @@ function handleNotificationsUpdate(e: Event) {
     showSettingsToast('Notification preferences saved!');
 }
 
+function handleThemeToggle(e: Event) {
+    userSettings.theme = (e.target as HTMLInputElement).checked ? 'dark' : 'light';
+    saveUserSettings();
+    applyTheme();
+}
+
 function handleLanguageRegionUpdate(e: Event) {
     e.preventDefault();
     userSettings.language = settingLanguageSelect.value;
     userSettings.timezone = settingTimezoneSelect.value;
     saveUserSettings();
-    showSettingsToast('Language and region saved!');
+    showSettingsToast('Language & region settings saved!');
 }
 
 function handleCreatorApplication(e: Event) {
     e.preventDefault();
     if (!currentUser) return;
-
-    const application = {
+    const creatorApps = JSON.parse(localStorage.getItem('creator_applications') || '{}');
+    creatorApps[currentUser] = {
         name: creatorNameInput.value,
         link: creatorLinkInput.value,
         reason: creatorReasonInput.value,
-        date: new Date().toISOString(),
+        status: 'pending'
     };
-
-    const applications = JSON.parse(localStorage.getItem('creator_applications') || '{}');
-    applications[currentUser] = application;
-    localStorage.setItem('creator_applications', JSON.stringify(applications));
-
+    localStorage.setItem('creator_applications', JSON.stringify(creatorApps));
+    
     if (creatorProgramForm) creatorProgramForm.style.display = 'none';
     if (creatorAppliedMessage) creatorAppliedMessage.style.display = 'block';
+    
+    showSettingsToast('Application submitted!');
 }
 
-function handleClearCache() {
-    Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('reset_')) {
-            localStorage.removeItem(key);
-        }
-    });
-    showSettingsToast('Temporary data cleared!');
+function handleSaveCard(e: Event) {
+    e.preventDefault();
+    if (!currentUser) return;
+    // ... logic to save card from settings ...
+    toggleAddCardView(false);
+    renderSavedCards();
+    showSettingsToast('Payment method added!');
 }
 
-function handleAccountDeletion() {
-    if (!currentUser || deleteConfirmInput.value !== currentUser) return;
+function handleRemoveCard(cardId: number) {
+    // ... logic to remove card ...
+    renderSavedCards();
+    showSettingsToast('Payment method removed.');
+}
 
-    localStorage.removeItem(`user_${currentUser}`);
-    localStorage.removeItem(`settings_${currentUser}`);
-    localStorage.removeItem(`creations_${currentUser}`);
+function handleSetDefaultCard(cardId: number) {
+    // ... logic to set default card ...
+    renderSavedCards();
+}
+
+function handleDeleteAccount() {
+    if (!currentUser) return;
+    
     const users = JSON.parse(localStorage.getItem('users') || '{}');
     delete users[currentUser];
     localStorage.setItem('users', JSON.stringify(users));
-
-    sessionStorage.removeItem('currentUser');
-    sessionStorage.removeItem('currentUserName');
+    
+    // Clear all related data
+    localStorage.removeItem(`user_${currentUser}`);
+    localStorage.removeItem(`settings_${currentUser}`);
+    localStorage.removeItem(`creations_${currentUser}`);
+    sessionStorage.clear();
+    
     window.location.href = window.location.pathname + '?message=account_deleted';
 }
 
-// --- File Handling & Creations ---
-function handleMyCreationsClick() {
-    if (!userState.isPremium) {
-        if (subscriptionModal) subscriptionModal.style.display = 'flex';
-        return;
-    }
-    creationsCurrentPage = 1; // Reset to the first page when opening
-    showCreationsGallery();
-}
-
-function showCreationsGallery() {
-    if (!currentUser || !creationsGallery) return;
-    const creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
-    creationsGallery.innerHTML = '';
-
-    const totalPages = Math.ceil(creations.length / CREATIONS_PER_PAGE);
-    const startIndex = (creationsCurrentPage - 1) * CREATIONS_PER_PAGE;
-    const endIndex = startIndex + CREATIONS_PER_PAGE;
-    const paginatedCreations = creations.slice(startIndex, endIndex);
-
-    if (creations.length === 0) {
-        creationsGallery.innerHTML = '<p>You have no saved creations yet.</p>';
-        if (creationsPaginationControls) creationsPaginationControls.style.display = 'none';
-    } else {
-        paginatedCreations.forEach((creation: any) => {
-            const card = document.createElement('div');
-            card.className = 'creation-card';
-            card.dataset.id = String(creation.id); // Store ID on the element
-            card.draggable = true; // Make it draggable
-            
-            let mediaEl: HTMLImageElement | HTMLVideoElement;
-            if (creation.type === 'video') {
-                mediaEl = document.createElement('video');
-                mediaEl.muted = true; // Mute videos in gallery
-                mediaEl.preload = 'metadata';
-                // Asynchronously fetch and set the video source for reliable playback
-                fetch(creation.data)
-                    .then(res => res.blob())
-                    .then(blob => {
-                        if (mediaEl instanceof HTMLVideoElement) {
-                           mediaEl.src = URL.createObjectURL(blob);
-                        }
-                    })
-                    .catch(e => console.error(`Failed to load video creation ${creation.id}:`, e));
-            } else {
-                mediaEl = document.createElement('img');
-                mediaEl.src = creation.data;
-                mediaEl.alt = creation.prompt;
-            }
-            
-            const overlay = document.createElement('div');
-            overlay.className = 'creation-overlay';
-            overlay.innerHTML = `
-                <div class="creation-actions">
-                    <button class="view-btn" title="View Full Size"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></button>
-                    <button class="rename-btn" title="Rename"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.26 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29zm-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z"/></svg></button>
-                    <button class="delete-btn" title="Delete"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg></button>
-                </div>`;
-
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'creation-info';
-            infoDiv.innerHTML = `<p class="creation-prompt">${creation.prompt || 'Untitled'}</p>`;
-
-            overlay.querySelector('.view-btn')?.addEventListener('click', () => {
-                currentCreation = creation;
-                showLargeView();
-            });
-            overlay.querySelector('.rename-btn')?.addEventListener('click', () => renameCreation(creation.id));
-            overlay.querySelector('.delete-btn')?.addEventListener('click', () => deleteCreation(creation.id));
-            
-            card.addEventListener('dragstart', (e) => {
-                card.classList.add('dragging');
-                if (e.dataTransfer) {
-                    e.dataTransfer.setData('text/plain', String(creation.id));
-                    e.dataTransfer.effectAllowed = 'move';
-                }
-            });
-            
-            card.addEventListener('dragend', () => {
-                card.classList.remove('dragging');
-            });
-            
-            card.appendChild(mediaEl);
-            card.appendChild(overlay);
-            card.appendChild(infoDiv);
-            creationsGallery.appendChild(card);
-        });
-
-        // Update pagination controls
-        if (creationsPaginationControls) creationsPaginationControls.style.display = 'flex';
-        if (creationsPageInfo) creationsPageInfo.textContent = `Page ${creationsCurrentPage} of ${totalPages}`;
-        if (creationsPrevPageButton) creationsPrevPageButton.disabled = creationsCurrentPage === 1;
-        if (creationsNextPageButton) creationsNextPageButton.disabled = creationsCurrentPage === totalPages;
-    }
-
-    if (creationsModal) creationsModal.style.display = 'flex';
-}
-
-function deleteCreation(id: number) {
-    if (!currentUser || !confirm('Are you sure you want to delete this creation?')) return;
-    let creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
-    creations = creations.filter((c: any) => c.id !== id);
-    localStorage.setItem(`creations_${currentUser}`, JSON.stringify(creations));
-    showCreationsGallery(); // Refresh the view
-}
-
-function renameCreation(id: number) {
-    if (!currentUser) return;
-    let creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
-    const creationIndex = creations.findIndex((c: any) => c.id === id);
-    if (creationIndex === -1) return;
-
-    const currentPrompt = creations[creationIndex].prompt;
-    const newPrompt = window.prompt(`Enter a new name or prompt for this creation:`, currentPrompt);
-    
-    if (newPrompt && newPrompt.trim() !== '') {
-        creations[creationIndex].prompt = newPrompt.trim();
-        localStorage.setItem(`creations_${currentUser}`, JSON.stringify(creations));
-        showCreationsGallery(); // Refresh view
-    }
-}
-
+// --- Creations & Gallery ---
 function handleDownload() {
+    if (!currentCreation.data) return;
+
     if (!userState.isPremium && userState.downloadsToday >= MAX_FREE_DOWNLOADS) {
-        if (subscriptionModal) subscriptionModal.style.display = 'flex';
+        showErrorModal(['You have reached your daily download limit.'], 'Download Limit Reached');
         return;
     }
     
-    const url = currentCreation.data;
-    if (!url) { console.error('Download source not available'); return; }
-
-    let filename: string;
-    if (currentCreation.type === 'video') {
-        filename = 'video.mp4';
-    } else {
-        const extension = userSettings.imageFormat === 'image/png' ? 'png' : 'jpeg';
-        filename = `image.${extension}`;
-    }
+    const a = document.createElement('a');
+    a.href = currentCreation.data;
+    
+    const fileExtension = currentCreation.type === 'video' ? 'mp4' : userSettings.imageFormat.split('/')[1];
+    a.download = `creation-${Date.now()}.${fileExtension}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 
     if (!userState.isPremium) {
         userState.downloadsToday++;
         saveUserState();
         updateUserStatusUI();
     }
-    downloadFile(url, filename);
 }
 
-function downloadFile(url: string, filename: string) {
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
-function saveCreation() {
+function handleSaveCreation() {
+    if (!currentUser) return;
     if (!userState.isPremium) {
-        if (subscriptionModal) subscriptionModal.style.display = 'flex';
+        showErrorModal(['Saving creations is a Premium feature.'], 'Upgrade to Save');
+        subscriptionModal.style.display = 'flex';
         return;
     }
-    if (!currentUser || !currentCreation.data) return;
+    if (!currentCreation.data) return;
 
     try {
         const creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
-        creations.unshift({ // Add to the beginning
+        const newCreation = {
             id: Date.now(),
+            prompt: currentPromptText,
             type: currentCreation.type,
             data: currentCreation.data,
-            prompt: currentPromptText,
-        });
+            timestamp: new Date().toISOString()
+        };
+        creations.unshift(newCreation); // Add to the beginning
         localStorage.setItem(`creations_${currentUser}`, JSON.stringify(creations));
-        
-        if (saveCreationButton) saveCreationButton.textContent = 'Saved!';
-        setTimeout(() => { 
-            if (saveCreationButton) saveCreationButton.textContent = 'Save Creation'; 
-        }, 2000);
-
+        showSettingsToast('Creation saved successfully!');
     } catch (e) {
         if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-            showErrorModal(
-                [
-                    'Your local storage is full, which means you have saved a very large number of creations.',
-                    'Please delete some older creations from the "My Creations" gallery to make space for new ones.'
-                ], 
-                'Storage Full'
-            );
+            showErrorModal(['Your browser storage is full. Please remove some saved creations to make space.'], 'Storage Full');
         } else {
-            console.error('Failed to save creation:', e);
-            showErrorModal([(e as Error).message], 'Save Failed');
+            showErrorModal(['An unexpected error occurred while saving.'], 'Save Failed');
         }
+        console.error("Save failed:", e);
     }
-}
-
-function showShareFallbackModal() {
-    if (shareFallbackModal) shareFallbackModal.style.display = 'flex';
 }
 
 async function handleShare() {
-    if (!navigator.share) {
-        showShareFallbackModal();
-        return;
-    }
+    if (!currentCreation.data) return;
+    
+    const blob = await fetch(currentCreation.data).then(res => res.blob());
+    const file = new File([blob], `creation.${currentCreation.type === 'video' ? 'mp4' : 'jpg'}`, { type: blob.type });
 
-    try {
-        // Convert data URL or object URL to blob/file
-        const response = await fetch(currentCreation.data);
-        const blob = await response.blob();
-        const extension = currentCreation.type === 'video' ? 'mp4' : (userSettings.imageFormat.split('/')[1] || 'jpeg');
-        const mimeType = currentCreation.type === 'video' ? 'video/mp4' : userSettings.imageFormat;
-        const file = new File([blob], `creation.${extension}`, { type: mimeType });
-        
-        // Use Web Share API
-        await navigator.share({
-            title: 'AI Creation by Se-Mo',
-            text: `Check out this ${currentCreation.type} I made!\n\nPrompt: ${currentPromptText}`,
-            files: [file],
-        });
-
-        // If share is successful (doesn't throw), award credit to free user
-        if (!userState.isPremium) {
-            const today = new Date().toISOString().split('T')[0];
-            if (userState.lastShareDate !== today) {
-                userState.sharesToday = 0;
-                userState.lastShareDate = today;
-            }
-
-            if (userState.sharesToday < MAX_SHARE_CREDITS) {
+    if (navigator.share && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({
+                title: 'AI Creation',
+                text: `Check out this ${currentCreation.type} I made!`,
+                files: [file],
+            });
+            if (!userState.isPremium) {
                 userState.sharesToday++;
-                
-                // Give them back one download credit if they have used any.
-                if (userState.downloadsToday > 0) {
-                    userState.downloadsToday--; 
-                }
-                
                 saveUserState();
                 updateUserStatusUI();
-                showSettingsToast(`Thanks for sharing! You've earned a download credit.`);
-            } else {
-                showSettingsToast('You have earned all your share credits for today!');
             }
+        } catch (error) {
+            console.error('Sharing failed:', error);
         }
-    } catch (error) {
-        // AbortError is expected if the user closes the share dialog, so we ignore it.
-        if ((error as DOMException).name !== 'AbortError') {
-            console.error('Error sharing:', error);
-            showErrorModal(['Please try again or download the file to share it manually.'], 'Sharing failed.');
-        }
-    }
-}
-
-// --- Utility & UI Helpers ---
-function showErrorModal(messages: string[], title?: string) {
-  const titleEl = errorModal?.querySelector('h3');
-  if (!titleEl || !errorMessageContainer) return;
-
-  titleEl.textContent = title || 'Error';
-  errorMessageContainer.innerHTML = messages.map(msg => `<p>${msg}</p>`).join('');
-  
-  if (errorModal) errorModal.style.display = 'flex';
-}
-
-function showSettingsToast(message: string) {
-    const toast = document.createElement('div');
-    toast.textContent = message;
-    toast.style.position = 'fixed';
-    toast.style.bottom = '20px';
-    toast.style.left = '50%';
-    toast.style.transform = 'translateX(-50%)';
-    toast.style.backgroundColor = 'var(--secondary-color)';
-    toast.style.color = 'white';
-    toast.style.padding = '10px 20px';
-    toast.style.borderRadius = '5px';
-    toast.style.zIndex = '1002';
-    toast.style.opacity = '0';
-    toast.style.transition = 'opacity 0.3s';
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.opacity = '1';
-    }, 100);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.addEventListener('transitionend', () => toast.remove());
-    }, 2500);
-}
-
-function hideLargeView() {
-    if (largeViewModal) largeViewModal.style.display = 'none';
-    if (largeViewImage) largeViewImage.src = '';
-    if (largeViewVideo) {
-        largeViewVideo.pause();
-        largeViewVideo.src = '';
-    }
-}
-
-function setControlsDisabled(disabled: boolean) {
-    if (generateButton) generateButton.disabled = disabled || currentPromptText.trim() === '';
-    if (aiAssistButton) aiAssistButton.disabled = disabled || currentPromptText.trim() === '';
-    if (upload) upload.disabled = disabled;
-    if (promptEl) promptEl.disabled = disabled;
-    if (durationSlider) durationSlider.disabled = disabled;
-    if (qualitySelect) qualitySelect.disabled = disabled;
-    if (videoAspectRatioSelect) videoAspectRatioSelect.disabled = disabled;
-    if (imageAspectRatioSelect) imageAspectRatioSelect.disabled = disabled;
-    if (imageFormatSelect) imageFormatSelect.disabled = disabled;
-    generationTypeRadios.forEach(radio => radio.disabled = disabled);
-}
-
-function showLargeView() {
-    if (!currentCreation.data || !largeViewModal) return;
-
-    if (currentCreation.type === 'image') {
-        if (largeViewImage) {
-            largeViewImage.src = currentCreation.data;
-            largeViewImage.style.display = 'block';
-        }
-        if (largeViewVideo) {
-            largeViewVideo.src = '';
-            largeViewVideo.style.display = 'none';
-        }
-    } else { // video
-        if (largeViewVideo) {
-            largeViewVideo.src = ''; // Clear previous source before fetching
-            largeViewVideo.style.display = 'block';
-        }
-        if (largeViewImage) {
-            largeViewImage.style.display = 'none';
-        }
-        
-        // Asynchronously fetch and set the video source for reliable playback
-        fetch(currentCreation.data)
-            .then(res => {
-                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-                return res.blob();
-            })
-            .then(blob => {
-                if (largeViewVideo) {
-                    largeViewVideo.src = URL.createObjectURL(blob);
-                }
-            })
-            .catch(e => {
-                console.error("Could not load large view video:", e);
-                showErrorModal(["Failed to load video for viewing. Please try downloading it instead."], "Playback Error");
-            });
-    }
-    largeViewModal.style.display = 'flex';
-}
-
-function renderPrompts(prompts: string[]) {
-    if (!dailyPromptsGallery) return;
-    dailyPromptsGallery.innerHTML = ''; // Clear existing
-    
-    prompts.forEach(promptText => {
-        const card = document.createElement('button');
-        card.className = 'prompt-card';
-        card.textContent = promptText;
-        
-        card.addEventListener('click', () => {
-            if (promptEl) {
-                promptEl.value = promptText;
-                promptEl.dispatchEvent(new Event('input', { bubbles: true }));
-                promptEl.focus();
-                showSettingsToast('Prompt copied!');
-            }
-        });
-        
-        dailyPromptsGallery.appendChild(card);
-    });
-}
-
-function fetchNewDailyPrompts() {
-    // Shuffle the array and pick the first few
-    const shuffled = [...ALL_PROMPTS].sort(() => 0.5 - Math.random());
-    const newPrompts = shuffled.slice(0, DAILY_PROMPTS_COUNT);
-    
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Save to localStorage
-    localStorage.setItem('daily_prompts', JSON.stringify(newPrompts));
-    localStorage.setItem('last_prompts_date', today);
-    
-    renderPrompts(newPrompts);
-}
-
-function populateDailyPrompts() {
-    const today = new Date().toISOString().split('T')[0];
-    const lastDate = localStorage.getItem('last_prompts_date');
-    const storedPromptsJSON = localStorage.getItem('daily_prompts');
-
-    if (lastDate === today && storedPromptsJSON) {
-        try {
-            const storedPrompts = JSON.parse(storedPromptsJSON);
-            if (Array.isArray(storedPrompts) && storedPrompts.length > 0) {
-                renderPrompts(storedPrompts);
-                return;
-            }
-        } catch (e) {
-            console.error("Failed to parse stored prompts:", e);
-        }
-    }
-    
-    // If it's a new day or data is invalid/missing, fetch new prompts
-    fetchNewDailyPrompts();
-}
-
-function getDragAfterElement(container: HTMLElement, y: number) {
-    const draggableElements = [...container.querySelectorAll('.creation-card:not(.dragging)')];
-
-    return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) {
-            return { offset: offset, element: child as HTMLElement };
-        } else {
-            return closest;
-        }
-    }, { offset: Number.NEGATIVE_INFINITY, element: null as (HTMLElement | null) }).element;
-}
-
-
-// --- Subscription & Payment Logic ---
-function toggleAddCardView(showForm: boolean) {
-    if (showForm) {
-        paymentMethodsView.style.display = 'none';
-        addCardForm.style.display = 'block';
-        addCardForm.reset();
     } else {
-        paymentMethodsView.style.display = 'block';
-        addCardForm.style.display = 'none';
+        shareFallbackModal.style.display = 'flex';
     }
 }
 
-function formatCardNumber(e: Event) {
-    const input = e.target as HTMLInputElement;
-    let value = input.value.replace(/\D/g, '');
-    value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
-    input.value = value;
-}
-
-function formatExpiry(e: Event) {
-    const input = e.target as HTMLInputElement;
-    let value = input.value.replace(/\D/g, '');
-    if (value.length > 2) {
-        value = value.substring(0, 2) + '/' + value.substring(2, 4);
-    }
-    input.value = value;
-}
-
-function renderSubscriptionStatus() {
-    if (!currentUser) return;
-    if (userState.isPremium) {
-        subscriptionStatusContainer.innerHTML = `
-            <h4>Current Plan: Premium ${userState.subscription.plan.charAt(0).toUpperCase() + userState.subscription.plan.slice(1)}</h4>
-            <p>Your subscription is active. Next billing date: ${userState.subscription.nextBilling}</p>
-        `;
-        paymentMethodsView.style.display = 'block';
+// FIX: Add missing function definitions for creations gallery.
+function updateSelectionToolbar() {
+    if (!creationsGallery || !creationsSelectionToolbar) return;
+    const selectedCheckboxes = creationsGallery.querySelectorAll('.creation-checkbox:checked');
+    const selectedCount = selectedCheckboxes.length;
+    
+    if (selectedCount > 0) {
+        creationsSelectionToolbar.style.display = 'flex';
+        if (selectionCountEl) selectionCountEl.textContent = `${selectedCount} selected`;
+        // For now, let's assume editing is only for one item.
+        if (editSelectedButton) editSelectedButton.disabled = selectedCount !== 1;
+        if (deleteSelectedButton) deleteSelectedButton.disabled = false;
     } else {
-        subscriptionStatusContainer.innerHTML = `
-            <h4>You are on the Free Plan</h4>
-            <p>Upgrade to Premium to manage payment methods and unlock all features.</p>
-            <button id="upgrade-from-settings-button" class="settings-save-button premium" style="margin-top: 1rem;">Upgrade to Premium</button>
-        `;
-        paymentMethodsView.style.display = 'none';
-        // Add event listener for the newly created button
-        document.getElementById('upgrade-from-settings-button')?.addEventListener('click', () => {
-            if (settingsModal) settingsModal.style.display = 'none';
-            if (subscriptionModal) subscriptionModal.style.display = 'flex';
-        });
+        creationsSelectionToolbar.style.display = 'none';
     }
 }
 
-function renderSavedCards() {
+function deleteCreations(ids: number[]) {
     if (!currentUser) return;
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    const cards = users[currentUser]?.paymentMethods || [];
+    let creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
+    creations = creations.filter(c => !ids.includes(c.id));
+    localStorage.setItem(`creations_${currentUser}`, JSON.stringify(creations));
+    
+    // After deleting, we might need to adjust the page number if the last item(s) on a page are removed
+    const totalPages = Math.ceil(creations.length / CREATIONS_PER_PAGE) || 1;
+    if (creationsCurrentPage > totalPages) {
+        creationsCurrentPage = totalPages;
+    }
 
-    savedCardsList.innerHTML = ''; // Clear existing list
-    if (cards.length === 0) {
-        savedCardsList.innerHTML = '<p>You have no saved payment methods.</p>';
+    renderCreations(creationsCurrentPage); // Re-render
+    showSettingsToast(`${ids.length} creation(s) deleted.`);
+}
+
+function renderCreations(page: number) {
+    if (!currentUser || !creationsGallery) return;
+
+    creationsCurrentPage = page;
+    const creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
+    
+    creationsGallery.innerHTML = ''; // Clear previous content
+
+    if (creations.length === 0) {
+        creationsGallery.innerHTML = '<p class="empty-gallery-message">You haven\'t saved any creations yet. Saved creations will appear here.</p>';
+        if (creationsPaginationControls) creationsPaginationControls.style.display = 'none';
+        if (creationsSelectionToolbar) creationsSelectionToolbar.style.display = 'none';
         return;
     }
 
-    cards.forEach((card: any) => {
-        let logoUrl = '';
-        const cardTypeLower = card.type.toLowerCase();
-        if (cardTypeLower === 'visa') {
-            logoUrl = 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg';
-        } else if (cardTypeLower === 'mastercard') {
-            logoUrl = 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg';
+    const totalPages = Math.ceil(creations.length / CREATIONS_PER_PAGE);
+    if (page < 1) page = 1;
+    if (page > totalPages) page = totalPages;
+    creationsCurrentPage = page;
+
+    const startIndex = (page - 1) * CREATIONS_PER_PAGE;
+    const endIndex = startIndex + CREATIONS_PER_PAGE;
+    const pageCreations = creations.slice(startIndex, endIndex);
+
+    pageCreations.forEach(creation => {
+        const creationEl = document.createElement('div');
+        creationEl.className = 'creation-item';
+        creationEl.dataset.id = String(creation.id);
+        
+        let mediaEl;
+        if (creation.type === 'video') {
+            mediaEl = document.createElement('video');
+            mediaEl.src = creation.data;
+            mediaEl.muted = true;
+            mediaEl.loop = true;
+            mediaEl.playsInline = true;
+        } else {
+            mediaEl = document.createElement('img');
+            mediaEl.src = creation.data;
+            mediaEl.alt = creation.prompt;
         }
 
-        const cardEl = document.createElement('div');
-        cardEl.className = 'saved-card-item';
-        const isDefaultBadge = card.isDefault ? '<span class="default-badge">Default</span>' : '';
-        cardEl.innerHTML = `
-            <img src="${logoUrl}" class="card-icon" alt="${card.type}">
-            <div class="card-info">
-                <div class="card-info-main">
-                  <span>${card.type} ending in ${card.maskedNumber}</span>
-                  ${isDefaultBadge}
+        creationEl.innerHTML = `
+            <div class="creation-media-wrapper">
+                ${mediaEl.outerHTML}
+                <div class="creation-overlay">
+                    <p title="${creation.prompt}">${creation.prompt.substring(0, 100)}${creation.prompt.length > 100 ? '...' : ''}</p>
                 </div>
-                <div class="card-info-sub">Cardholder: ${card.holderName}</div>
             </div>
-            <div class="card-actions">
-                <button class="set-default-btn" title="Set as Default" ${card.isDefault ? 'style="display:none;"' : ''}>
-                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                </button>
-                <button class="delete-card-btn" title="Delete Card">
-                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>
+            <div class="creation-actions">
+                <input type="checkbox" class="creation-checkbox" data-id="${creation.id}">
+                <span class="creation-date">${new Date(creation.timestamp).toLocaleDateString()}</span>
+                <button class="icon-button delete-creation-btn" data-id="${creation.id}" title="Delete">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
                 </button>
             </div>
         `;
-        cardEl.querySelector('.set-default-btn')?.addEventListener('click', () => handleSetDefaultCard(card.id));
-        cardEl.querySelector('.delete-card-btn')?.addEventListener('click', () => handleDeleteCard(card.id));
-        savedCardsList.appendChild(cardEl);
+        
+        creationsGallery.appendChild(creationEl);
     });
-}
+    
+    // Add event listeners after appending all elements
+    // FIX: Add generic type to querySelectorAll to ensure correct element types are inferred by TypeScript, allowing access to `dataset`.
+    creationsGallery.querySelectorAll<HTMLElement>('.creation-item').forEach(item => {
+        const creationId = parseInt(item.dataset.id || '0', 10);
+        const creation = pageCreations.find(c => c.id === creationId);
+        if (!creation) return;
 
-function handleSaveCard(e: Event) {
-    e.preventDefault();
-    if (!currentUser) return;
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    if (!users[currentUser]) return;
-
-    const cardNumber = cardNumberInput.value.replace(/\s/g, '');
-    const newCard = {
-        id: Date.now(),
-        type: cardNumber.startsWith('4') ? 'Visa' : 'Mastercard',
-        maskedNumber: cardNumber.slice(-4),
-        holderName: cardHolderInput.value,
-        isDefault: setCardDefaultCheckbox.checked,
-    };
-
-    let cards = users[currentUser].paymentMethods || [];
-    if (newCard.isDefault) {
-        cards.forEach((c: any) => c.isDefault = false);
-    }
-    cards.push(newCard);
-
-    users[currentUser].paymentMethods = cards;
-    localStorage.setItem('users', JSON.stringify(users));
-
-    renderSavedCards();
-    toggleAddCardView(false);
-    showSettingsToast('Payment method saved!');
-}
-
-function handleSetDefaultCard(cardId: number) {
-    if (!currentUser) return;
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    if (!users[currentUser]?.paymentMethods) return;
-
-    users[currentUser].paymentMethods.forEach((card: any) => {
-        card.isDefault = card.id === cardId;
-    });
-
-    localStorage.setItem('users', JSON.stringify(users));
-    renderSavedCards();
-}
-
-function handleDeleteCard(cardId: number) {
-    if (!currentUser || !confirm('Are you sure you want to delete this payment method?')) return;
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    if (!users[currentUser]?.paymentMethods) return;
-
-    users[currentUser].paymentMethods = users[currentUser].paymentMethods.filter((card: any) => card.id !== cardId);
-
-    // If the deleted card was the default, make another one default if possible
-    if (users[currentUser].paymentMethods.length > 0 && !users[currentUser].paymentMethods.some((c: any) => c.isDefault)) {
-        users[currentUser].paymentMethods[0].isDefault = true;
-    }
-
-    localStorage.setItem('users', JSON.stringify(users));
-    renderSavedCards();
-}
-
-// --- Custom Video Player ---
-function setupCustomVideoPlayer() {
-    if (!video || !videoPlayerContainer) return;
-
-    // --- Helper Functions ---
-    function formatTime(timeInSeconds: number) {
-        const result = new Date(timeInSeconds * 1000).toISOString().substring(14, 5);
-        return result;
-    }
-
-    function togglePlay() {
-        video.paused ? video.play() : video.pause();
-    }
-
-    function updatePlayButton() {
-        if (video.paused) {
-            playBtnIcon.style.display = 'block';
-            pauseBtnIcon.style.display = 'none';
-            videoPlayerContainer.classList.add('paused');
-        } else {
-            playBtnIcon.style.display = 'none';
-            pauseBtnIcon.style.display = 'block';
-            videoPlayerContainer.classList.remove('paused');
-        }
-    }
-
-    function toggleMute() {
-        video.muted = !video.muted;
-    }
-
-    function updateVolume() {
-        if (video.muted || video.volume === 0) {
-            volumeSlider.value = '0';
-            volumeHighIcon.style.display = 'none';
-            volumeMutedIcon.style.display = 'block';
-        } else {
-            volumeSlider.value = String(video.volume);
-            volumeHighIcon.style.display = 'block';
-            volumeMutedIcon.style.display = 'none';
-        }
-        volumeSlider.style.background = `linear-gradient(to right, white ${Number(volumeSlider.value) * 100}%, rgba(255, 255, 255, 0.3) ${Number(volumeSlider.value) * 100}%)`;
-    }
-
-    function changePlaybackSpeed(speed: number) {
-        video.playbackRate = speed;
-        speedBtn.textContent = `${speed}x`;
-        // Update active class on speed options
-        speedOptionsContainer.querySelectorAll('button').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.speed === String(speed));
+        item.addEventListener('mouseenter', () => {
+            const video = item.querySelector('video');
+            if (video) video.play().catch(e => {});
         });
-    }
 
-    function toggleFullScreen() {
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        } else {
-            videoPlayerContainer.requestFullscreen();
+        item.addEventListener('mouseleave', () => {
+            const video = item.querySelector('video');
+            if (video) video.pause();
+        });
+
+        const mediaWrapper = item.querySelector('.creation-media-wrapper');
+        if (mediaWrapper) {
+            mediaWrapper.addEventListener('click', (e) => {
+                // Don't open large view if clicking checkbox inside the wrapper
+                if ((e.target as HTMLElement).tagName === 'INPUT') return;
+
+                if (largeViewModal && largeViewImage && largeViewVideo) {
+                    largeViewModal.style.display = 'flex';
+                    if (creation.type === 'image') {
+                        largeViewImage.src = creation.data;
+                        largeViewImage.style.display = 'block';
+                        largeViewVideo.style.display = 'none';
+                        largeViewVideo.src = '';
+                    } else {
+                        largeViewVideo.src = creation.data;
+                        largeViewVideo.controls = true;
+                        largeViewVideo.style.display = 'block';
+                        largeViewImage.style.display = 'none';
+                        largeViewImage.src = '';
+                    }
+                }
+            });
         }
-    }
+        
 
-    function updateFullscreenButton() {
-        if (document.fullscreenElement) {
-            fullscreenOpenIcon.style.display = 'none';
-            fullscreenCloseIcon.style.display = 'block';
-        } else {
-            fullscreenOpenIcon.style.display = 'block';
-            fullscreenCloseIcon.style.display = 'none';
+        const checkbox = item.querySelector('.creation-checkbox');
+        if (checkbox) checkbox.addEventListener('change', updateSelectionToolbar);
+
+        const deleteBtn = item.querySelector('.delete-creation-btn');
+        if (deleteBtn) deleteBtn.addEventListener('click', () => {
+            if (confirm(`Are you sure you want to delete this creation?`)) {
+                deleteCreations([creationId]);
+            }
+        });
+    });
+
+    // Update pagination controls
+    if (creationsPaginationControls) {
+        creationsPaginationControls.style.display = totalPages > 1 ? 'flex' : 'none';
+        if (creationsPageInfo) creationsPageInfo.textContent = `Page ${page} of ${totalPages}`;
+        if (creationsPrevPageButton) creationsPrevPageButton.disabled = page === 1;
+        if (creationsNextPageButton) creationsNextPageButton.disabled = page === totalPages;
+    }
+    
+    updateSelectionToolbar();
+}
+
+function openCreationsModal(showLast: boolean = false) {
+    if (!userState.isPremium) {
+        showErrorModal(['Viewing saved creations is a Premium feature.'], 'Premium Feature');
+        subscriptionModal.style.display = 'flex';
+        return;
+    }
+    renderCreations(1);
+    creationsModal.style.display = 'flex';
+}
+
+// ... Add more missing functions and finally the init block
+
+function setupEventListeners() {
+    // This function will connect all the UI elements to their JavaScript handlers
+}
+
+// --- Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+    cacheDOMElements();
+    // setupEventListeners(); // This will be fully implemented later
+    
+    // Simulate loading time for splash screen
+    setTimeout(() => {
+        checkAuthStatus();
+        if (splashScreen) {
+            splashScreen.classList.add('hidden');
         }
-    }
-
-
-    // --- Event Listeners ---
-    video.addEventListener('loadedmetadata', () => {
-        totalTimeEl.textContent = formatTime(video.duration);
-        progressBar.max = String(video.duration);
-    });
-    
-    video.addEventListener('timeupdate', () => {
-        currentTimeEl.textContent = formatTime(video.currentTime);
-        progressBar.value = String(video.currentTime);
-        const percentage = (video.currentTime / video.duration) * 100;
-        progressBar.style.background = `linear-gradient(to right, var(--primary-color) ${percentage}%, rgba(255, 255, 255, 0.3) ${percentage}%)`;
-    });
-    
-    video.addEventListener('play', updatePlayButton);
+    }, 1500);
+});

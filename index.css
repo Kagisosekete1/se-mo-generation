@@ -1994,6 +1994,9 @@ input:checked + .toggle-slider:before {
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 .settings-utility-button:hover {
     background-color: var(--border-color);
@@ -2041,14 +2044,45 @@ input:checked + .toggle-slider:before {
     display: flex;
     flex-direction: column;
     background-color: var(--card-background);
-    cursor: grab;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: box-shadow 0.2s, border-color 0.2s;
 }
 
-.creation-card.dragging {
-    opacity: 0.5;
-    cursor: grabbing;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+.creation-card.selected {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-color);
 }
+
+.creation-card .selection-indicator {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease-in-out;
+    transform: scale(0);
+    opacity: 0;
+    z-index: 2;
+}
+.creation-card.selected .selection-indicator {
+    transform: scale(1);
+    opacity: 1;
+    border-color: var(--primary-color);
+    background-color: var(--primary-color);
+}
+.creation-card .selection-indicator svg {
+    width: 16px;
+    height: 16px;
+    fill: white;
+}
+
 
 .creation-card img, .creation-card video {
     width: 100%;
@@ -2086,6 +2120,7 @@ input:checked + .toggle-slider:before {
     align-items: center;
     opacity: 0;
     transition: opacity 0.2s;
+    z-index: 1;
 }
 
 .creation-card:hover .creation-overlay {
@@ -2140,6 +2175,31 @@ input:checked + .toggle-slider:before {
     cursor: not-allowed;
     background-color: var(--subtle-background);
 }
+
+#creations-selection-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background-color: var(--subtle-background);
+    border-top: 1px solid var(--border-color);
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    margin: 1rem -24px -24px -24px;
+}
+#selection-count {
+    font-weight: 500;
+    color: var(--subtle-text-color);
+    font-size: 0.9rem;
+}
+.selection-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+.selection-actions .settings-utility-button {
+    margin-top: 0;
+}
+
 
 /* Help & Support Section Styles */
 .help-support-content {
@@ -2229,6 +2289,254 @@ input:checked + .toggle-slider:before {
   line-height: 1;
 }
 
+/* Video Editor Modal */
+#video-editor-modal .modal-content {
+    padding: 0;
+    overflow: hidden;
+}
+.editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+.editor-header h3 {
+    margin: 0;
+}
+.editor-main-actions {
+    display: flex;
+    gap: 1rem;
+}
+.editor-main-actions .settings-save-button, 
+.editor-main-actions .settings-utility-button {
+    margin-top: 0;
+}
+.editor-layout {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden;
+    background: var(--background-color);
+}
+.editor-preview-panel {
+    flex-grow: 3;
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--background-color);
+}
+#editor-preview-video {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 4px;
+    background-color: #000;
+}
+.editor-timeline-panel {
+    flex-grow: 1;
+    min-width: 300px;
+    max-width: 400px;
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    background-color: var(--card-background);
+}
+.editor-timeline-panel h4 {
+    margin: 0;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+.timeline-container {
+    flex-grow: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.timeline-clip {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    background-color: var(--subtle-background);
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+.timeline-clip.dragging {
+    opacity: 0.4;
+    border-style: dashed;
+}
+.timeline-clip:hover {
+    border-color: var(--subtle-text-color);
+}
+.timeline-clip.active {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px var(--primary-color);
+}
+.clip-drag-handle {
+    cursor: grab;
+    color: var(--subtle-text-color);
+}
+.clip-thumbnail-wrapper {
+    position: relative;
+    width: 80px;
+    height: 45px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 2px;
+    background-color: var(--border-color);
+}
+.timeline-clip .clip-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    background-color: transparent;
+    border-radius: 0;
+    flex-shrink: 0;
+}
+.trim-overlay {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(29, 30, 32, 0.7);
+    pointer-events: none;
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+}
+.trim-overlay-start {
+    left: 0;
+    border-right: 2px solid rgba(255, 255, 255, 0.7);
+}
+.trim-overlay-end {
+    right: 0;
+    border-left: 2px solid rgba(255, 255, 255, 0.7);
+}
+
+.clip-info {
+    flex-grow: 1;
+    overflow: hidden;
+}
+.clip-prompt {
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.clip-duration {
+    font-size: 0.75rem;
+    color: var(--subtle-text-color);
+}
+.clip-actions {
+    display: flex;
+}
+.clip-actions button {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: var(--subtle-text-color);
+}
+.clip-actions button:hover {
+    color: var(--text-color);
+}
+.clip-actions svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Clip Editor Panel */
+#clip-editor-panel {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--subtle-background);
+    flex-shrink: 0;
+}
+#clip-editor-title {
+    font-size: 1.1rem;
+    padding: 0;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    border-bottom: none;
+    line-height: 1.3;
+}
+#clip-editor-title .prompt-text {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--subtle-text-color);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.trim-controls, .speed-controls {
+    margin-bottom: 1rem;
+}
+.trim-controls:last-child, .speed-controls:last-child {
+    margin-bottom: 0;
+}
+.trim-controls label, .speed-controls label {
+    display: block;
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+.trim-time-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.trim-time-inputs input {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    font-family: monospace;
+    font-size: 0.9rem;
+    text-align: center;
+    background-color: var(--card-background);
+    color: var(--text-color);
+}
+.trim-time-inputs input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+.trim-time-inputs span {
+    font-weight: 500;
+    color: var(--subtle-text-color);
+}
+.speed-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+.speed-buttons button {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--card-background);
+    color: var(--text-color);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+.speed-buttons button:hover {
+    background-color: var(--subtle-background);
+}
+.speed-buttons button.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
 /* --- Responsive Design --- */
 @media (max-width: 768px) {
   body {
@@ -2316,6 +2624,25 @@ input:checked + .toggle-slider:before {
   
   .volume-container:hover .volume-slider {
     width: 50px;
+  }
+
+  /* Editor Responsive */
+  .editor-layout {
+    flex-direction: column;
+    height: 100%;
+  }
+  .editor-preview-panel {
+    flex-basis: 50%;
+    flex-grow: 1;
+  }
+  .editor-timeline-panel {
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+    min-width: auto;
+    max-width: 100%;
+    flex-grow: 1;
+    flex-basis: 50%;
+    height: 50%;
   }
 }
 
