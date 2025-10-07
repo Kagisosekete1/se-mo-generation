@@ -486,7 +486,7 @@ function cacheDOMElements() {
 function showErrorModal(messages: string[], title: string = 'An Error Occurred') {
     if (!errorModal || !errorMessageContainer) return;
     
-    const errorTitleEl = errorModal.querySelector('h2');
+    const errorTitleEl = errorModal.querySelector('h3');
     if (errorTitleEl) {
         errorTitleEl.textContent = title;
     }
@@ -1211,10 +1211,6 @@ async function generate() {
   if (currentPromptText.trim() === '') {
     showErrorModal(['Please enter a prompt.']); return;
   }
-  const explicitWords = ['explicit', 'forbidden', 'banned', 'inappropriate'];
-  if (explicitWords.some(word => currentPromptText.toLowerCase().includes(word))) {
-    if (statusEl) statusEl.innerText = 'Image creation out of line.'; return;
-  }
 
   if (spinnerContainer) spinnerContainer.style.display = 'flex';
   if (statusEl) statusEl.innerText = '';
@@ -1248,19 +1244,15 @@ async function generate() {
             'API Quota Exceeded'
         );
     } else {
-        let displayMessage = rawErrorMessage;
-        try {
-            const parsed = JSON.parse(rawErrorMessage);
-            if (parsed.error && parsed.error.message) {
-                displayMessage = parsed.error.message;
-            }
-        } catch (parseError) {
-            // Not a JSON string, use the raw message which is fine.
-        }
-        showErrorModal([displayMessage], `Image Generation Failed`);
+        showErrorModal(
+            [
+                'We could not generate the picture as it may have violated our safety policies or referenced copyrighted material. Please adjust your prompt and try again.',
+            ],
+            'Generation Unsuccessful'
+        );
     }
     
-    if (statusEl) statusEl.innerText = `Error generating image.`;
+    if (statusEl) statusEl.innerText = `Generation failed. Please try a new prompt.`;
   } finally {
     if (spinnerContainer) spinnerContainer.style.display = 'none';
     setControlsDisabled(false);
