@@ -1076,13 +1076,14 @@ textarea:focus, select:focus {
 }
 
 .chat-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
     padding: 0.75rem;
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     transition: background-color 0.2s, color 0.2s;
     color: var(--subtle-text-color);
     font-weight: 500;
@@ -1097,6 +1098,41 @@ textarea:focus, select:focus {
 .chat-list-item.active {
     background-color: var(--primary-color);
     color: white;
+}
+
+.chat-list-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+}
+
+.chat-delete-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--subtle-text-color);
+    flex-shrink: 0;
+    opacity: 0;
+    transition: background-color 0.2s, opacity 0.2s;
+}
+
+.chat-list-item:hover .chat-delete-btn {
+    opacity: 1;
+}
+
+.chat-delete-btn:hover {
+    background-color: rgba(0,0,0,0.1);
+    color: var(--danger-color);
+}
+
+[data-theme="dark"] .chat-delete-btn:hover {
+    background-color: rgba(255,255,255,0.1);
 }
 
 #chat-main {

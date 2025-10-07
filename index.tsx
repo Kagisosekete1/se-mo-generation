@@ -2,7 +2,7 @@
 /**
  * @license
  * Copyright 2025 Google LLC
- * SPDX-License: Apache-2.0
+ * SPDX-License-Identifier: Apache-2.0
  */
 import {GoogleGenAI, Modality, Content} from '@google/genai';
 
@@ -1804,6 +1804,27 @@ async function handleShareChat() {
     }
 }
 
+function handleDeleteChat(id: string) {
+    if (confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
+        const chatIndex = conversations.findIndex(c => c.id === id);
+        if (chatIndex === -1) return;
+
+        conversations.splice(chatIndex, 1);
+        saveConversations();
+        
+        if (activeConversationId === id) {
+            if (conversations.length > 0) {
+                const newIndex = Math.min(chatIndex, conversations.length - 1);
+                handleSwitchChat(conversations[newIndex].id);
+            } else {
+                handleNewChat();
+            }
+        }
+        
+        renderChatList();
+    }
+}
+
 function loadConversations() {
     if (!currentUser) return;
     const saved = localStorage.getItem(`conversations_${currentUser}`);
@@ -1828,11 +1849,28 @@ function renderChatList() {
     conversations.forEach(convo => {
         const li = document.createElement('li');
         li.className = 'chat-list-item';
-        li.textContent = convo.title;
         li.dataset.id = convo.id;
         if (convo.id === activeConversationId) {
             li.classList.add('active');
         }
+
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'chat-list-title';
+        titleSpan.textContent = convo.title;
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'chat-delete-btn';
+        deleteBtn.title = 'Delete chat';
+        deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>`;
+
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent switching to this chat
+            handleDeleteChat(convo.id);
+        });
+
+        li.appendChild(titleSpan);
+        li.appendChild(deleteBtn);
+
         li.addEventListener('click', () => handleSwitchChat(convo.id));
         chatList.appendChild(li);
     });
