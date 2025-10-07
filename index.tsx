@@ -1534,6 +1534,23 @@ function handleDeleteAccount() {
 }
 
 // --- Creations & Gallery ---
+function viewCurrentCreation() {
+    if (!currentCreation || !currentCreation.data) {
+        showErrorModal(['There is no creation to view.'], 'Nothing to View');
+        return;
+    }
+
+    if (largeViewModal && largeViewImage && largeViewVideo) {
+        largeViewModal.style.display = 'flex';
+        if (currentCreation.type === 'image') {
+            largeViewImage.src = currentCreation.data;
+            largeViewImage.style.display = 'block';
+            largeViewVideo.style.display = 'none';
+            largeViewVideo.src = '';
+        }
+    }
+}
+
 function handleDownload() {
     if (!currentCreation.data) return;
 
@@ -1844,7 +1861,7 @@ function handleSwitchChat(id: string) {
 
 const initialGreeting: Content = {
     role: 'model',
-    parts: [{ text: "Hello! How can I help you today? You can ask me to write a proposal, generate ideas, or find information for you." }]
+    parts: [{ text: "Hello! I'm Se-Mo, your creative assistant. How can I help you today? You can ask me to write a proposal, generate ideas, or find information for you." }]
 };
 
 function handleNewChat() {
@@ -2070,7 +2087,7 @@ function setupEventListeners() {
     if (downloadButton) downloadButton.addEventListener('click', handleDownload);
     if (saveCreationButton) saveCreationButton.addEventListener('click', handleSaveCreation);
     if (shareButton) shareButton.addEventListener('click', handleShare);
-    if (viewCreationButton) viewCreationButton.addEventListener('click', () => openCreationsModal());
+    if (viewCreationButton) viewCreationButton.addEventListener('click', viewCurrentCreation);
 
     // --- Daily Prompts ---
     if (refreshPromptsButton) refreshPromptsButton.addEventListener('click', populateDailyPrompts);
