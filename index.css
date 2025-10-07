@@ -1281,6 +1281,7 @@ textarea:focus, select:focus {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 8px 0; /* Add padding to prevent clipping */
 }
 
 .chat-loading-indicator .dot {
@@ -1288,14 +1289,18 @@ textarea:focus, select:focus {
   height: 8px;
   border-radius: 50%;
   background-color: var(--subtle-text-color);
-  animation: bounce 1.4s infinite ease-in-out both;
+  animation: wave 1.4s infinite ease-in-out both;
 }
 .chat-loading-indicator .dot:nth-child(1) { animation-delay: -0.32s; }
 .chat-loading-indicator .dot:nth-child(2) { animation-delay: -0.16s; }
 
-@keyframes bounce {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1.0); }
+@keyframes wave {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-8px);
+  }
 }
 
 
