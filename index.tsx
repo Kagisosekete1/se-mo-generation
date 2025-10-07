@@ -36,6 +36,13 @@ const ALL_PROMPTS = [
 const DAILY_PROMPTS_COUNT = 5;
 const CREATIONS_PER_PAGE = 12;
 
+// --- Type Definitions ---
+interface Conversation {
+    id: string;
+    title: string;
+    history: Content[];
+}
+
 
 // --- App State ---
 let currentUser: string | null = null;
@@ -74,7 +81,8 @@ let base64data = '';
 let mimeType = '';
 let currentPromptText = '';
 let creationsCurrentPage = 1;
-let chatHistory: Content[] = [];
+let conversations: Conversation[] = [];
+let activeConversationId: string | null = null;
 let isChatLoading = false;
 
 // --- DOM Elements ---
@@ -127,6 +135,10 @@ let imageGeneratorView: HTMLDivElement;
 let chatView: HTMLDivElement;
 
 // Chat Elements
+let chatSidebar: HTMLDivElement;
+let newChatButton: HTMLButtonElement;
+let chatList: HTMLUListElement;
+let chatMain: HTMLDivElement;
 let chatHistoryEl: HTMLDivElement;
 let chatForm: HTMLFormElement;
 let chatInput: HTMLTextAreaElement;
@@ -313,6 +325,10 @@ function cacheDOMElements() {
     chatView = document.querySelector('#chat-view') as HTMLDivElement;
 
     // Chat Elements
+    chatSidebar = document.querySelector('#chat-sidebar') as HTMLDivElement;
+    newChatButton = document.querySelector('#new-chat-button') as HTMLButtonElement;
+    chatList = document.querySelector('#chat-list') as HTMLUListElement;
+    chatMain = document.querySelector('#chat-main') as HTMLDivElement;
     chatHistoryEl = document.querySelector('#chat-history') as HTMLDivElement;
     chatForm = document.querySelector('#chat-form') as HTMLFormElement;
     chatInput = document.querySelector('#chat-input') as HTMLTextAreaElement;
@@ -499,7 +515,7 @@ function populateDailyPrompts() {
     const promptsToShow = shuffled.slice(0, DAILY_PROMPTS_COUNT);
     
     promptsToShow.forEach(promptText => {
-        const promptCard = document.createElement('div');
+        const promptCard = document.createElement('button');
         promptCard.className = 'prompt-card';
         promptCard.textContent = promptText;
         promptCard.addEventListener('click', () => {
@@ -627,6 +643,7 @@ function showMainApp() {
     initializeUserState(); // This will load profile, settings (including theme), and user state
     loadUserProfile();
     populateDailyPrompts();
+    loadConversations();
     if (dailyPromptsContainer) dailyPromptsContainer.style.display = 'block';
 }
 
@@ -752,6 +769,8 @@ function handleLogout() {
     sessionStorage.removeItem('currentUserName');
     currentUser = null;
     currentUserName = null;
+    conversations = [];
+    activeConversationId = null;
     window.location.search = '';
     showAuthScreen();
 }
@@ -1624,6 +1643,7 @@ function handleDeleteAccount() {
     localStorage.removeItem(`user_${currentUser}`);
     localStorage.removeItem(`settings_${currentUser}`);
     localStorage.removeItem(`creations_${currentUser}`);
+    localStorage.removeItem(`conversations_${currentUser}`);
     sessionStorage.clear();
     
     window.location.href = window.location.pathname + '?message=account_deleted';
@@ -1847,13 +1867,80 @@ function openCreationsModal() {
 }
 
 // --- Chat ---
+function loadConversations() {
+    if (!currentUser) return;
+    const saved = localStorage.getItem(`conversations_${currentUser}`);
+    conversations = saved ? JSON.parse(saved) : [];
+    renderChatList();
+    
+    if (conversations.length > 0) {
+        handleSwitchChat(conversations[0].id);
+    } else {
+        handleNewChat();
+    }
+}
+
+function saveConversations() {
+    if (!currentUser) return;
+    localStorage.setItem(`conversations_${currentUser}`, JSON.stringify(conversations));
+}
+
+function renderChatList() {
+    if (!chatList) return;
+    chatList.innerHTML = '';
+    conversations.forEach(convo => {
+        const li = document.createElement('li');
+        li.className = 'chat-list-item';
+        li.textContent = convo.title;
+        li.dataset.id = convo.id;
+        if (convo.id === activeConversationId) {
+            li.classList.add('active');
+        }
+        li.addEventListener('click', () => handleSwitchChat(convo.id));
+        chatList.appendChild(li);
+    });
+}
+
+function renderChatHistory(history: Content[]) {
+    if (!chatHistoryEl) return;
+    chatHistoryEl.innerHTML = '';
+    history.forEach(message => {
+        const role = message.role as 'user' | 'model';
+        const text = message.parts.map(part => (part as { text: string }).text).join('');
+        renderChatMessage(text, role);
+    });
+    chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+}
+
+function handleSwitchChat(id: string) {
+    activeConversationId = id;
+    const conversation = conversations.find(c => c.id === id);
+    if (conversation) {
+        renderChatHistory(conversation.history);
+    }
+    renderChatList(); // To update active state styling
+}
+
+const initialGreeting: Content = {
+    role: 'model',
+    parts: [{ text: "Hello! How can I help you today? You can ask me to write a proposal, generate ideas, or find information for you." }]
+};
+
+function handleNewChat() {
+    activeConversationId = null;
+    chatHistoryEl.innerHTML = '';
+    renderChatMessage((initialGreeting.parts[0] as { text: string }).text, 'model');
+    chatInput.value = '';
+    chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+    renderChatList(); // To remove active state from list
+}
+
 function parseSimpleMarkdown(text: string): string {
     return text
         .replace(/```([\s\S]*?)```/g, (_match, code) => `<pre><code>${code.trim()}</code></pre>`)
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>');
 }
-
 
 function renderChatMessage(message: string, role: 'user' | 'model', sources?: any[]) {
     const messageWrapper = document.createElement('div');
@@ -1862,7 +1949,7 @@ function renderChatMessage(message: string, role: 'user' | 'model', sources?: an
     const messageContent = document.createElement('div');
     messageContent.className = 'chat-message-content';
     
-    if (role === 'model' && isChatLoading) {
+    if (role === 'model' && message === '') { // This is a loading indicator
         messageContent.innerHTML = `
             <div class="chat-loading-indicator">
                 <div class="dot"></div>
@@ -1902,22 +1989,34 @@ async function handleChatSubmit(e?: Event) {
     if (isChatLoading || chatInput.value.trim() === '') return;
 
     const userInput = chatInput.value.trim();
-    chatHistory.push({ role: 'user', parts: [{ text: userInput }] });
     renderChatMessage(userInput, 'user');
-    
+
+    let currentHistory: Content[];
+    let isNewChat = false;
+
+    if (activeConversationId === null) {
+        isNewChat = true;
+        currentHistory = [];
+    } else {
+        const conversation = conversations.find(c => c.id === activeConversationId);
+        currentHistory = conversation ? [...conversation.history] : [];
+    }
+
+    currentHistory.push({ role: 'user', parts: [{ text: userInput }] });
+
+    // UI updates
     chatInput.value = '';
-    chatInput.style.height = 'auto';
-    chatSendButton.disabled = true;
+    chatInput.dispatchEvent(new Event('input', { bubbles: true }));
     isChatLoading = true;
-    
     const loadingIndicator = renderChatMessage('', 'model');
 
     try {
         const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: chatHistory,
+            contents: currentHistory,
             config: {
+                systemInstruction: "You are a helpful and professional writing assistant. Your responses should be well-structured, using paragraphs and lists where appropriate. Ensure your writing is grammatically correct, coherent, and properly spelled. Be clear and concise.",
                 tools: [{googleSearch: {}}],
             },
         });
@@ -1925,9 +2024,27 @@ async function handleChatSubmit(e?: Event) {
         const modelResponse = response.text;
         const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
         
-        chatHistory.push({ role: 'model', parts: [{ text: modelResponse }] });
+        currentHistory.push({ role: 'model', parts: [{ text: modelResponse }] });
         
-        // Update the loading indicator with the actual response
+        if (isNewChat) {
+            const newId = `chat_${Date.now()}`;
+            const newTitle = userInput.split(' ').slice(0, 5).join(' ') + (userInput.length > 30 ? '...' : '');
+            const newConversation: Conversation = {
+                id: newId,
+                title: newTitle,
+                history: currentHistory
+            };
+            conversations.unshift(newConversation);
+            activeConversationId = newId;
+            renderChatList();
+        } else {
+            const conversation = conversations.find(c => c.id === activeConversationId);
+            if (conversation) {
+                conversation.history = currentHistory;
+            }
+        }
+        saveConversations();
+        
         const messageContent = loadingIndicator.querySelector('.chat-message-content') as HTMLDivElement;
         if(messageContent) messageContent.innerHTML = parseSimpleMarkdown(modelResponse);
         if (groundingChunks && groundingChunks.length > 0) {
@@ -1955,7 +2072,7 @@ async function handleChatSubmit(e?: Event) {
         }
     } finally {
         isChatLoading = false;
-        chatSendButton.disabled = false;
+        chatInput.dispatchEvent(new Event('input', { bubbles: true }));
         chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
     }
 }
@@ -2007,6 +2124,7 @@ function setupEventListeners() {
     if (clearPreviewButton) clearPreviewButton.addEventListener('click', clearPreview);
     
     // --- Chat ---
+    if (newChatButton) newChatButton.addEventListener('click', handleNewChat);
     if (chatForm) chatForm.addEventListener('submit', handleChatSubmit);
     if (chatInput) {
         chatInput.addEventListener('input', () => {

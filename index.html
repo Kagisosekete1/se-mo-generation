@@ -236,19 +236,28 @@
     </div>
 
     <div id="chat-view" style="display: none;">
-        <div id="chat-history">
-             <div class="chat-message model">
-                <div class="chat-message-content">Hello! How can I help you today? You can ask me to write a proposal, generate ideas, or find information for you.</div>
-            </div>
+        <div id="chat-sidebar">
+            <button id="new-chat-button" class="button button-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm440-160h240v-80H560v80Zm0-160h240v-80H560v80Z"/></svg>
+                <span>New Chat</span>
+            </button>
+            <ul id="chat-list">
+                <!-- Chat history items will be populated here -->
+            </ul>
         </div>
-        <form id="chat-form">
-            <div id="chat-input-wrapper">
-                <textarea id="chat-input" placeholder="Message your assistant..." required rows="1"></textarea>
-                <button id="chat-send-button" type="submit" title="Send message" disabled>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                </button>
+        <div id="chat-main">
+            <div id="chat-history">
+                <!-- Messages will be rendered here -->
             </div>
-        </form>
+            <form id="chat-form">
+                <div id="chat-input-wrapper">
+                    <textarea id="chat-input" placeholder="Message your assistant..." required rows="1"></textarea>
+                    <button id="chat-send-button" type="submit" title="Send message" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
 </main>
