@@ -136,175 +136,121 @@
         </div>
     </header>
     <h1>Se-Mo Generation</h1>
-    <div id="generation-type-container">
-        <label class="gen-type-label">
-            <input type="radio" name="generation-type" value="video" checked>
-            <span>Video</span>
-        </label>
-        <label class="gen-type-label">
-            <input type="radio" name="generation-type" value="image">
-            <span>Image</span>
-        </label>
+
+    <div id="main-nav-container">
+        <button id="image-nav-button" class="main-nav-button active" data-view="image">Image Generation</button>
+        <button id="chat-nav-button" class="main-nav-button" data-view="chat">Chat</button>
     </div>
 
-    <div id="prompt-container">
-        <label for="prompt-input">Prompt</label>
-        <div class="prompt-wrapper">
-            <textarea id="prompt-input" rows="3" placeholder="e.g., A cinematic shot of a raccoon chief in tribal attire, leading a war party."></textarea>
-            <button id="ai-assist-button" class="ai-assist-button" title="Enhance with AI" disabled>
-                <svg id="ai-assist-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5 4.5L9 11l-2.5 2.5L9 16l2.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15zM9.5 5.5L7 3l-2.5 2.5L7 8l2.5-2.5z"/></svg>
-                <div id="ai-assist-spinner" class="ai-assist-spinner"></div>
-            </button>
+    <div id="image-generator-view">
+        <div id="prompt-container">
+            <label for="prompt-input">Prompt</label>
+            <div class="prompt-wrapper">
+                <textarea id="prompt-input" rows="3" placeholder="e.g., A cinematic shot of a raccoon chief in tribal attire, leading a war party."></textarea>
+                <button id="ai-assist-button" class="ai-assist-button" title="Enhance with AI" disabled>
+                    <svg id="ai-assist-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5 4.5L9 11l-2.5 2.5L9 16l2.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15zM9.5 5.5L7 3l-2.5 2.5L7 8l2.5-2.5z"/></svg>
+                    <div id="ai-assist-spinner" class="ai-assist-spinner"></div>
+                </button>
+            </div>
+            <select id="example-prompts-select" aria-label="Example prompts">
+              <option value="">-- Or try an example --</option>
+              <option value="A majestic lion surveying its kingdom from a cliff at sunrise.">Majestic lion at sunrise...</option>
+              <option value="A futuristic city with flying cars and holographic billboards.">Futuristic city with flying cars...</option>
+              <option value="Epic cinematic shot of a lone samurai facing a dragon on a snowy mountain peak.">Samurai facing a dragon...</option>
+              <option value="A hyper-detailed macro shot of a single snowflake on a red mitten.">Macro shot of a snowflake...</option>
+              <option value="A whimsical watercolor illustration of animals having a tea party in a magical forest.">Watercolor animal tea party...</option>
+              <option value="An astronaut floating in space, gazing at the Earth from afar.">Astronaut gazing at Earth...</option>
+              <option value="A spooky, abandoned Victorian mansion under a full moon, with swirling fog.">Spooky abandoned mansion...</option>
+              <option value="Pixel art animation of a character running through a vibrant 8-bit landscape.">Pixel art 8-bit landscape...</option>
+              <option value="A delicious-looking cheeseburger and fries, studio lighting, photorealistic.">Photorealistic cheeseburger...</option>
+            </select>
         </div>
-        <select id="example-prompts-select" aria-label="Example prompts">
-          <option value="">-- Or try an example --</option>
-          <option value="A majestic lion surveying its kingdom from a cliff at sunrise.">Majestic lion at sunrise...</option>
-          <option value="A futuristic city with flying cars and holographic billboards.">Futuristic city with flying cars...</option>
-          <option value="Epic cinematic shot of a lone samurai facing a dragon on a snowy mountain peak.">Samurai facing a dragon...</option>
-          <option value="A hyper-detailed macro shot of a single snowflake on a red mitten.">Macro shot of a snowflake...</option>
-          <option value="A whimsical watercolor illustration of animals having a tea party in a magical forest.">Watercolor animal tea party...</option>
-          <option value="An astronaut floating in space, gazing at the Earth from afar.">Astronaut gazing at Earth...</option>
-          <option value="A spooky, abandoned Victorian mansion under a full moon, with swirling fog.">Spooky abandoned mansion...</option>
-          <option value="Pixel art animation of a character running through a vibrant 8-bit landscape.">Pixel art 8-bit landscape...</option>
-          <option value="A time-lapse of a flower blooming, from bud to full blossom.">Time-lapse of a flower blooming...</option>
-          <option value="An oil painting of a cozy library in a treehouse during a thunderstorm.">Oil painting of a cozy library...</option>
-          <option value="A high-fashion model wearing a dress made of liquid light on a runway in space.">Fashion model in a light dress...</option>
-          <option value="A delicious-looking cheeseburger and fries, studio lighting, photorealistic.">Photorealistic cheeseburger...</option>
-        </select>
-    </div>
-    
-    <div id="upload-container">
-        <label for="file-input" id="file-input-label">Conditioning Image (Optional)</label>
-        <div class="file-input-wrapper">
-          <label for="file-input" class="file-input-button">
-            <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
-            <span>Choose File</span>
-          </label>
-          <span id="file-name-display" class="file-name-display">No file chosen</span>
+        
+        <div id="upload-container">
+            <label for="file-input" id="file-input-label">Input Image (Optional for editing)</label>
+            <div class="file-input-wrapper">
+              <label for="file-input" class="file-input-button">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
+                <span>Choose File</span>
+              </label>
+              <span id="file-name-display" class="file-name-display">No file chosen</span>
+            </div>
+            <input type="file" id="file-input" class="sr-only" accept="image/*">
         </div>
-        <input type="file" id="file-input" class="sr-only" accept="image/*">
-    </div>
 
-    <div id="preview-container" style="display: none;">
-      <img id="image-preview" class="preview-media" alt="Image preview">
-      <button id="clear-preview-button" title="Clear selection">&times;</button>
-    </div>
-
-    <div id="video-settings">
-        <fieldset class="settings-fieldset">
-            <legend>Video Settings</legend>
-             <div class="setting">
-                <label for="duration-slider">
-                    <span>Duration</span>
-                    <span id="duration-value">5s</span>
-                </label>
-                <input type="range" id="duration-slider" min="2" max="15" value="5" aria-labelledby="duration-value">
-            </div>
-            <div class="setting">
-                <label for="quality-select">Quality</label>
-                <select id="quality-select">
-                    <option value="standard">Standard</option>
-                    <option value="hd">HD</option>
-                </select>
-            </div>
-            <div class="setting">
-              <label for="aspect-ratio-select">Aspect Ratio</label>
-              <select id="aspect-ratio-select">
-                <option value="16:9">16:9 (Widescreen)</option>
-                <option value="9:16">9:16 (Vertical)</option>
-                <option value="1:1">1:1 (Square)</option>
-                <option value="4:3">4:3 (Classic TV)</option>
-                <option value="3:4">3:4 (Portrait)</option>
-              </select>
-            </div>
-        </fieldset>
-    </div>
-
-    <div id="image-settings" style="display: none;">
-         <fieldset class="settings-fieldset image-settings-fieldset">
-            <legend>Image Settings</legend>
-            <div class="setting">
-                <label for="image-aspect-ratio-select">Aspect Ratio</label>
-                <select id="image-aspect-ratio-select">
-                    <option value="1:1">1:1 (Square)</option>
-                    <option value="16:9">16:9 (Widescreen)</option>
-                    <option value="9:16">9:16 (Vertical)</option>
-                    <option value="4:3">4:3 (Landscape)</option>
-                    <option value="3:4">3:4 (Portrait)</option>
-                </select>
-            </div>
-             <div class="setting">
-                <label for="image-format-select">Format</label>
-                <select id="image-format-select">
-                    <option value="image/jpeg">JPEG</option>
-                    <option value="image/png">PNG</option>
-                </select>
-            </div>
-        </fieldset>
-    </div>
-    
-    <button id="generate-button">Generate Video</button>
-    
-    <div id="spinner-container">
-        <div class="spinner"></div>
-    </div>
-    <div id="status">Ready.</div>
-    
-    <div id="results-container">
-        <h2>Your Creation</h2>
-        <div class="video-player-container">
-            <div class="video-controls-container">
-                 <input type="range" class="progress-bar" value="0" min="0" step="0.01">
-                <div class="controls">
-                    <button id="play-pause-btn" class="control-button" title="Play/Pause">
-                        <svg id="play-btn-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
-                        <svg id="pause-btn-icon" style="display:none;" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg>
-                    </button>
-                    <div class="time-container">
-                        <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
-                    </div>
-                    <div class="volume-container">
-                        <button id="volume-btn" class="control-button" title="Mute/Unmute">
-                           <svg id="volume-high-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg>
-                           <svg id="volume-muted-icon" style="display:none;" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"></path></svg>
-                        </button>
-                        <input type="range" class="volume-slider" max="1" value="1" step="0.01">
-                    </div>
-                    <div class="speed-container">
-                        <button id="speed-btn" class="control-button" title="Playback Speed">1x</button>
-                        <div class="speed-options">
-                            <button data-speed="0.5">0.5x</button>
-                            <button data-speed="1" class="active">1x</button>
-                            <button data-speed="1.5">1.5x</button>
-                            <button data-speed="2">2x</button>
-                        </div>
-                    </div>
-                     <button id="fullscreen-btn" class="control-button" title="Fullscreen">
-                        <svg id="fullscreen-open-icon" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"></path></svg>
-                        <svg id="fullscreen-close-icon" style="display:none;" viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"></path></svg>
-                    </button>
+        <div id="preview-container" style="display: none;">
+          <img id="image-preview" class="preview-media" alt="Image preview">
+          <button id="clear-preview-button" title="Clear selection">&times;</button>
+        </div>
+        
+        <div id="image-settings">
+             <fieldset class="settings-fieldset image-settings-fieldset">
+                <legend>Image Settings</legend>
+                <div class="setting">
+                    <label for="image-aspect-ratio-select">Aspect Ratio</label>
+                    <select id="image-aspect-ratio-select">
+                        <option value="1:1">1:1 (Square)</option>
+                        <option value="16:9">16:9 (Widescreen)</option>
+                        <option value="9:16">9:16 (Vertical)</option>
+                        <option value="4:3">4:3 (Landscape)</option>
+                        <option value="3:4">3:4 (Portrait)</option>
+                    </select>
                 </div>
-            </div>
-            <video id="video" style="display: none;"></video>
+                 <div class="setting">
+                    <label for="image-format-select">Format</label>
+                    <select id="image-format-select">
+                        <option value="image/jpeg">JPEG</option>
+                        <option value="image/png">PNG</option>
+                    </select>
+                </div>
+            </fieldset>
+        </div>
+        
+        <button id="generate-button">Generate Image</button>
+        
+        <div id="spinner-container">
+            <div class="spinner"></div>
+        </div>
+        <div id="status">Ready.</div>
+        
+        <div id="results-container">
+            <h2>Your Creation</h2>
             <img id="result-image" alt="Generated image">
+            <div class="results-actions">
+                <button id="download-button">Download Image</button>
+                <button id="save-creation-button" disabled>Save Creation</button>
+                <button id="share-button" disabled>Share</button>
+                <button id="view-creation-button" disabled>View Creation</button>
+            </div>
         </div>
-        <div class="results-actions">
-            <button id="download-button">Download</button>
-            <button id="save-creation-button" disabled>Save Creation</button>
-            <button id="share-button" disabled>Share</button>
-            <button id="view-creation-button" disabled>View Creation</button>
+        
+        <div id="daily-prompts-container" style="display: none;">
+            <div class="daily-prompts-header">
+                <h2>Daily Prompts</h2>
+                <button id="refresh-prompts-button" title="Get new prompts">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 132 28.5T720-690v-110h80v280H520v-80h168q-32-54-87-87t-121-33q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 142-45t98-125h82q-34 100-118.5 165T480-160Z"/></svg>
+                </button>
+            </div>
+            <div id="daily-prompts-gallery"></div>
         </div>
     </div>
-    
-    <div id="daily-prompts-container" style="display: none;">
-        <div class="daily-prompts-header">
-            <h2>Daily Prompts</h2>
-            <button id="refresh-prompts-button" title="Get new prompts">
-                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 132 28.5T720-690v-110h80v280H520v-80h168q-32-54-87-87t-121-33q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 142-45t98-125h82q-34 100-118.5 165T480-160Z"/></svg>
-            </button>
+
+    <div id="chat-view" style="display: none;">
+        <div id="chat-history">
+             <div class="chat-message model">
+                <div class="chat-message-content">Hello! How can I help you today? You can ask me to write a proposal, generate ideas, or find information for you.</div>
+            </div>
         </div>
-        <div id="daily-prompts-gallery"></div>
+        <form id="chat-form">
+            <div id="chat-input-wrapper">
+                <textarea id="chat-input" placeholder="Message your assistant..." required rows="1"></textarea>
+                <button id="chat-send-button" type="submit" title="Send message" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
+            </div>
+        </form>
     </div>
+
 </main>
 
 <div id="error-modal" class="modal-overlay">
@@ -548,22 +494,7 @@
             <div class="settings-pane" id="pane-generation">
                  <h3>Generation Settings</h3>
                 <form id="generation-settings-form" class="settings-form">
-                    <p class="form-group-description">These settings affect the output of your generated videos and images.</p>
-                     <div class="form-group">
-                        <label for="setting-video-quality">Default Video Quality</label>
-                        <select id="setting-video-quality">
-                            <option value="standard">Standard</option>
-                            <option value="hd">HD (High Definition)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="setting-motion-blur">
-                            <span>Motion Blur Strength</span>
-                            <span id="setting-motion-blur-value">Medium</span>
-                        </label>
-                        <input type="range" id="setting-motion-blur" min="0" max="1" step="0.1" value="0.5">
-                        <small>Adds a motion blur effect to videos for a more dynamic feel. Higher values increase the effect.</small>
-                    </div>
+                    <p class="form-group-description">These settings affect the output of your generated images.</p>
                      <div class="form-group">
                         <label for="setting-image-aspect-ratio">Default Image Aspect Ratio</label>
                         <select id="setting-image-aspect-ratio">
@@ -756,7 +687,7 @@
     <button id="large-view-close-button">&times;</button>
     <div class="large-view-content">
         <img id="large-view-image" alt="Full size creation">
-        <video id="large-view-video" controls></video>
+        <video id="large-view-video" controls style="display: none;"></video>
     </div>
 </div>
 
@@ -795,44 +726,13 @@
   </div>
 </div>
 
-<div id="video-editor-modal" class="modal-overlay">
+<div id="video-editor-modal" class="modal-overlay" style="display: none;">
   <div class="modal-content" style="max-width: 90vw; max-height: 90vh; height: 90vh; width: 90vw; display: flex; flex-direction: column;">
     <div class="editor-header">
         <h3>Video Editor</h3>
         <div class="editor-main-actions">
             <button id="export-video-button" class="settings-save-button">Export Video</button>
             <button id="video-editor-close-button" class="settings-utility-button">Close</button>
-        </div>
-    </div>
-    <div class="editor-layout">
-        <div class="editor-preview-panel">
-            <video id="editor-preview-video" controls></video>
-        </div>
-        <div class="editor-timeline-panel">
-            <div id="clip-editor-panel" style="display: none;">
-                <h4 id="clip-editor-title">Edit Clip</h4>
-                <div class="trim-controls">
-                    <label>Trim</label>
-                    <div class="trim-time-inputs">
-                        <input type="text" id="trim-start-time" aria-label="Start time">
-                        <span>-</span>
-                        <input type="text" id="trim-end-time" aria-label="End time">
-                    </div>
-                </div>
-                <div class="speed-controls">
-                    <label>Playback Speed</label>
-                    <div class="speed-buttons">
-                        <button data-speed="0.5">0.5x</button>
-                        <button data-speed="1" class="active">1x</button>
-                        <button data-speed="1.5">1.5x</button>
-                        <button data-speed="2">2x</button>
-                    </div>
-                </div>
-            </div>
-            <h4>Timeline</h4>
-            <div id="editor-timeline" class="timeline-container">
-                <!-- Timeline clips will be populated by JS -->
-            </div>
         </div>
     </div>
   </div>

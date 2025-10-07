@@ -4,7 +4,7 @@
  * Copyright 2025 Google LLC
  * SPDX-License: Apache-2.0
  */
-import {GoogleGenAI, Modality} from '@google/genai';
+import {GoogleGenAI, Modality, Content} from '@google/genai';
 
 // --- App Constants ---
 const GEMINI_API_KEY = process.env.API_KEY;
@@ -53,8 +53,6 @@ let userState = {
   }
 };
 let userSettings = {
-    videoQuality: 'standard',
-    motionBlurStrength: 0.5,
     imageAspectRatio: '1:1',
     imageFormat: 'image/jpeg',
     watermark: true,
@@ -67,21 +65,17 @@ let userSettings = {
     language: 'en-US',
     timezone: 'Africa/Johannesburg',
 };
-let generationType = 'video';
 let currentCreation = {
     data: '',
-    type: '', // 'video' or 'image'
+    type: '', // 'image'
 };
 let selectedPremiumPlan: 'monthly' | 'yearly' | null = null;
 let base64data = '';
 let mimeType = '';
 let currentPromptText = '';
 let creationsCurrentPage = 1;
-let editorClips: any[] = [];
-let activeEditorClipId: number | null = null;
-let isPlayingSequence = false;
-let sequencePlayIndex = 0;
-
+let chatHistory: Content[] = [];
+let isChatLoading = false;
 
 // --- DOM Elements ---
 let mainContent: HTMLElement;
@@ -112,8 +106,6 @@ let downloadButton: HTMLButtonElement;
 let saveCreationButton: HTMLButtonElement;
 let shareButton: HTMLButtonElement;
 let viewCreationButton: HTMLButtonElement;
-let generationTypeRadios: NodeListOf<HTMLInputElement>;
-let videoSettings: HTMLDivElement;
 let imageSettings: HTMLDivElement;
 let imageAspectRatioSelect: HTMLSelectElement;
 let imageFormatSelect: HTMLSelectElement;
@@ -123,15 +115,22 @@ let generateButton: HTMLButtonElement;
 let aiAssistButton: HTMLButtonElement;
 let statusEl: HTMLDivElement;
 let spinnerContainer: HTMLDivElement;
-let video: HTMLVideoElement;
-let durationSlider: HTMLInputElement;
-let durationValue: HTMLSpanElement;
-let qualitySelect: HTMLSelectElement;
 let examplePromptsSelect: HTMLSelectElement;
-let videoAspectRatioSelect: HTMLSelectElement;
 let upload: HTMLInputElement;
 let fileNameDisplay: HTMLSpanElement;
 let fileInputLabel: HTMLLabelElement;
+
+// Main Navigation
+let imageNavButton: HTMLButtonElement;
+let chatNavButton: HTMLButtonElement;
+let imageGeneratorView: HTMLDivElement;
+let chatView: HTMLDivElement;
+
+// Chat Elements
+let chatHistoryEl: HTMLDivElement;
+let chatForm: HTMLFormElement;
+let chatInput: HTMLTextAreaElement;
+let chatSendButton: HTMLButtonElement;
 
 // Preview Elements
 let previewContainer: HTMLDivElement;
@@ -198,9 +197,6 @@ let confirmPasswordInput: HTMLInputElement;
 let facebookLinkInput: HTMLInputElement;
 let xLinkInput: HTMLInputElement;
 let instagramLinkInput: HTMLInputElement;
-let settingVideoQualitySelect: HTMLSelectElement;
-let settingMotionBlurSlider: HTMLInputElement;
-let settingMotionBlurValue: HTMLSpanElement;
 let settingImageAspectRatioSelect: HTMLSelectElement;
 let settingImageFormatSelect: HTMLSelectElement;
 let settingWatermarkToggle: HTMLInputElement;
@@ -263,35 +259,6 @@ let cardExpiryInput: HTMLInputElement;
 let cardCvvInput: HTMLInputElement;
 let setCardDefaultCheckbox: HTMLInputElement;
 
-// Custom Video Player Elements
-let videoPlayerContainer: HTMLDivElement;
-let playPauseBtn: HTMLButtonElement;
-let playBtnIcon: SVGElement;
-let pauseBtnIcon: SVGElement;
-let progressBar: HTMLInputElement;
-let currentTimeEl: HTMLSpanElement;
-let totalTimeEl: HTMLSpanElement;
-let volumeBtn: HTMLButtonElement;
-let volumeHighIcon: SVGElement;
-let volumeMutedIcon: SVGElement;
-let volumeSlider: HTMLInputElement;
-let speedBtn: HTMLButtonElement;
-let speedOptionsContainer: HTMLDivElement;
-let fullscreenBtn: HTMLButtonElement;
-let fullscreenOpenIcon: SVGElement;
-let fullscreenCloseIcon: SVGElement;
-
-// Video Editor Elements
-let videoEditorModal: HTMLDivElement;
-let videoEditorCloseButton: HTMLButtonElement;
-let exportVideoButton: HTMLButtonElement;
-let editorPreviewVideo: HTMLVideoElement;
-let editorTimeline: HTMLDivElement;
-let clipEditorPanel: HTMLDivElement;
-let trimStartTimeInput: HTMLInputElement;
-let trimEndTimeInput: HTMLInputElement;
-let speedButtonsContainer: HTMLDivElement;
-
 
 // --- Function Definitions ---
 
@@ -313,7 +280,6 @@ function cacheDOMElements() {
     authErrorEl = document.querySelector('#auth-error') as HTMLDivElement;
     authSuccessEl = document.querySelector('#auth-success') as HTMLDivElement;
     authLegalContainer = document.querySelector('#auth-legal-container') as HTMLDivElement;
-    // FIX: Add generic types to querySelectorAll to ensure correct element types are inferred by TypeScript.
     authLegalTabs = document.querySelectorAll<HTMLButtonElement>('.auth-legal-tab');
     authLegalPanes = document.querySelectorAll<HTMLDivElement>('.auth-legal-pane');
 
@@ -326,9 +292,6 @@ function cacheDOMElements() {
     saveCreationButton = document.querySelector('#save-creation-button') as HTMLButtonElement;
     shareButton = document.querySelector('#share-button') as HTMLButtonElement;
     viewCreationButton = document.querySelector('#view-creation-button') as HTMLButtonElement;
-    // FIX: Add generic type to querySelectorAll to ensure correct element types are inferred by TypeScript.
-    generationTypeRadios = document.querySelectorAll<HTMLInputElement>('input[name="generation-type"]');
-    videoSettings = document.querySelector('#video-settings') as HTMLDivElement;
     imageSettings = document.querySelector('#image-settings') as HTMLDivElement;
     imageAspectRatioSelect = document.querySelector('#image-aspect-ratio-select') as HTMLSelectElement;
     imageFormatSelect = document.querySelector('#image-format-select') as HTMLSelectElement;
@@ -338,15 +301,22 @@ function cacheDOMElements() {
     aiAssistButton = document.querySelector('#ai-assist-button') as HTMLButtonElement;
     statusEl = document.querySelector('#status') as HTMLDivElement;
     spinnerContainer = document.querySelector('#spinner-container') as HTMLDivElement;
-    video = document.querySelector('#video') as HTMLVideoElement;
-    durationSlider = document.querySelector('#duration-slider') as HTMLInputElement;
-    durationValue = document.querySelector('#duration-value') as HTMLSpanElement;
-    qualitySelect = document.querySelector('#quality-select') as HTMLSelectElement;
     examplePromptsSelect = document.querySelector('#example-prompts-select') as HTMLSelectElement;
-    videoAspectRatioSelect = document.querySelector('#aspect-ratio-select') as HTMLSelectElement;
     upload = document.querySelector('#file-input') as HTMLInputElement;
     fileNameDisplay = document.querySelector('#file-name-display') as HTMLSpanElement;
     fileInputLabel = document.querySelector('#file-input-label') as HTMLLabelElement;
+
+    // Main Navigation
+    imageNavButton = document.querySelector('#image-nav-button') as HTMLButtonElement;
+    chatNavButton = document.querySelector('#chat-nav-button') as HTMLButtonElement;
+    imageGeneratorView = document.querySelector('#image-generator-view') as HTMLDivElement;
+    chatView = document.querySelector('#chat-view') as HTMLDivElement;
+
+    // Chat Elements
+    chatHistoryEl = document.querySelector('#chat-history') as HTMLDivElement;
+    chatForm = document.querySelector('#chat-form') as HTMLFormElement;
+    chatInput = document.querySelector('#chat-input') as HTMLTextAreaElement;
+    chatSendButton = document.querySelector('#chat-send-button') as HTMLButtonElement;
 
     // Preview
     previewContainer = document.querySelector('#preview-container') as HTMLDivElement;
@@ -391,7 +361,6 @@ function cacheDOMElements() {
     refreshPromptsButton = document.querySelector('#refresh-prompts-button') as HTMLButtonElement;
 
     // Settings Modal
-    // FIX: Add generic types to querySelectorAll to ensure correct element types are inferred by TypeScript.
     settingsNavLinks = document.querySelectorAll<HTMLButtonElement>('.settings-nav-link');
     settingsPanes = document.querySelectorAll<HTMLDivElement>('.settings-pane');
     profileForm = document.querySelector('#profile-form') as HTMLFormElement;
@@ -412,9 +381,6 @@ function cacheDOMElements() {
     facebookLinkInput = document.querySelector('#facebook-link-input') as HTMLInputElement;
     xLinkInput = document.querySelector('#x-link-input') as HTMLInputElement;
     instagramLinkInput = document.querySelector('#instagram-link-input') as HTMLInputElement;
-    settingVideoQualitySelect = document.querySelector('#setting-video-quality') as HTMLSelectElement;
-    settingMotionBlurSlider = document.querySelector('#setting-motion-blur') as HTMLInputElement;
-    settingMotionBlurValue = document.querySelector('#setting-motion-blur-value') as HTMLSpanElement;
     settingImageAspectRatioSelect = document.querySelector('#setting-image-aspect-ratio') as HTMLSelectElement;
     settingImageFormatSelect = document.querySelector('#setting-image-format') as HTMLSelectElement;
     settingWatermarkToggle = document.querySelector('#setting-watermark-toggle') as HTMLInputElement;
@@ -447,7 +413,6 @@ function cacheDOMElements() {
     largeViewCloseButton = document.querySelector('#large-view-close-button') as HTMLButtonElement;
     
     // Payment
-    // FIX: Add generic type to querySelectorAll to ensure correct element types are inferred by TypeScript.
     pricingPlans = document.querySelectorAll<HTMLDivElement>('.pricing-plan');
     continuePaymentButton = document.querySelector('#continue-payment-button') as HTMLButtonElement;
     paymentMessageContainer = document.querySelector('#payment-message-container') as HTMLDivElement;
@@ -478,38 +443,8 @@ function cacheDOMElements() {
     cardExpiryInput = document.querySelector('#card-expiry-input') as HTMLInputElement;
     cardCvvInput = document.querySelector('#card-cvv-input') as HTMLInputElement;
     setCardDefaultCheckbox = document.querySelector('#set-card-default-checkbox') as HTMLInputElement;
-    
-    // Custom Video Player
-    videoPlayerContainer = document.querySelector('.video-player-container') as HTMLDivElement;
-    playPauseBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
-    playBtnIcon = document.querySelector('#play-btn-icon') as SVGElement;
-    pauseBtnIcon = document.querySelector('#pause-btn-icon') as SVGElement;
-    progressBar = document.querySelector('.progress-bar') as HTMLInputElement;
-    currentTimeEl = document.querySelector('#current-time') as HTMLSpanElement;
-    totalTimeEl = document.querySelector('#total-time') as HTMLSpanElement;
-    volumeBtn = document.querySelector('#volume-btn') as HTMLButtonElement;
-    volumeHighIcon = document.querySelector('#volume-high-icon') as SVGElement;
-    volumeMutedIcon = document.querySelector('#volume-muted-icon') as SVGElement;
-    volumeSlider = document.querySelector('.volume-slider') as HTMLInputElement;
-    speedBtn = document.querySelector('#speed-btn') as HTMLButtonElement;
-    speedOptionsContainer = document.querySelector('.speed-options') as HTMLDivElement;
-    fullscreenBtn = document.querySelector('#fullscreen-btn') as HTMLButtonElement;
-    fullscreenOpenIcon = document.querySelector('#fullscreen-open-icon') as SVGElement;
-    fullscreenCloseIcon = document.querySelector('#fullscreen-close-icon') as SVGElement;
-
-    // Video Editor
-    videoEditorModal = document.querySelector('#video-editor-modal') as HTMLDivElement;
-    videoEditorCloseButton = document.querySelector('#video-editor-close-button') as HTMLButtonElement;
-    exportVideoButton = document.querySelector('#export-video-button') as HTMLButtonElement;
-    editorPreviewVideo = document.querySelector('#editor-preview-video') as HTMLVideoElement;
-    editorTimeline = document.querySelector('#editor-timeline') as HTMLDivElement;
-    clipEditorPanel = document.querySelector('#clip-editor-panel') as HTMLDivElement;
-    trimStartTimeInput = document.querySelector('#trim-start-time') as HTMLInputElement;
-    trimEndTimeInput = document.querySelector('#trim-end-time') as HTMLInputElement;
-    speedButtonsContainer = document.querySelector('.speed-buttons') as HTMLDivElement;
 }
 
-// FIX: Define missing utility and helper functions to resolve "Cannot find name" errors.
 function showErrorModal(messages: string[], title: string = 'An Error Occurred') {
     if (!errorModal || !errorMessageContainer) return;
     
@@ -551,12 +486,8 @@ function setControlsDisabled(disabled: boolean) {
     if (aiAssistButton) aiAssistButton.disabled = disabled;
     if (promptEl) promptEl.disabled = disabled;
     if (upload) upload.disabled = disabled;
-    if (durationSlider) durationSlider.disabled = disabled;
-    if (qualitySelect) qualitySelect.disabled = disabled;
-    if (videoAspectRatioSelect) videoAspectRatioSelect.disabled = disabled;
     if (imageAspectRatioSelect) imageAspectRatioSelect.disabled = disabled;
     if (imageFormatSelect) imageFormatSelect.disabled = disabled;
-    generationTypeRadios.forEach(radio => radio.disabled = disabled);
 }
 
 function populateDailyPrompts() {
@@ -569,7 +500,7 @@ function populateDailyPrompts() {
     
     promptsToShow.forEach(promptText => {
         const promptCard = document.createElement('div');
-        promptCard.className = 'daily-prompt-card';
+        promptCard.className = 'prompt-card';
         promptCard.textContent = promptText;
         promptCard.addEventListener('click', () => {
             if (promptEl) {
@@ -987,8 +918,6 @@ function loadUserSettings() {
     if (!currentUser) return;
     const savedSettings = JSON.parse(localStorage.getItem(`settings_${currentUser}`) || '{}');
     userSettings = {
-        videoQuality: savedSettings.videoQuality || 'standard',
-        motionBlurStrength: savedSettings.motionBlurStrength !== undefined ? savedSettings.motionBlurStrength : 0.5,
         imageAspectRatio: savedSettings.imageAspectRatio || '1:1',
         imageFormat: savedSettings.imageFormat || 'image/jpeg',
         watermark: savedSettings.watermark !== undefined ? savedSettings.watermark : !userState.isPremium,
@@ -1016,7 +945,6 @@ function applyTheme() {
 
 
 function applyUserSettingsToDashboard() {
-    if (qualitySelect) qualitySelect.value = userSettings.videoQuality;
     if (imageAspectRatioSelect) imageAspectRatioSelect.value = userSettings.imageAspectRatio;
     if (imageFormatSelect) imageFormatSelect.value = userSettings.imageFormat;
 }
@@ -1025,7 +953,7 @@ function applyUserSettingsToDashboard() {
 function updateUserStatusUI() {
   if (userState.isPremium) {
     if (userStatusEl) {
-        userStatusEl.innerHTML = `<span class="premium-badge">Premium</span> Unlimited Generations`;
+        userStatusEl.innerHTML = `<span class="premium-badge">Premium</span> Unlimited Access`;
     }
     if (subscribeButton) subscribeButton.style.display = 'none';
   } else {
@@ -1210,36 +1138,6 @@ function handleSaveCardInModal(e: Event) {
 
 
 // --- Generation ---
-function handleGenerationTypeChange(event: Event) {
-    const target = event.target as HTMLInputElement;
-    generationType = target.value;
-    
-    if (resultsContainer) resultsContainer.style.display = 'none';
-    if (video) video.src = '';
-    if (resultImage) resultImage.src = '';
-    if (saveCreationButton) saveCreationButton.disabled = true;
-    if (shareButton) shareButton.disabled = true;
-    if (viewCreationButton) viewCreationButton.disabled = true;
-
-    clearPreview();
-
-    if (upload) upload.disabled = false;
-
-    if (generationType === 'video') {
-        if (videoSettings) videoSettings.style.display = 'block';
-        if (imageSettings) imageSettings.style.display = 'none';
-        if (generateButton) generateButton.textContent = 'Generate Video';
-        if (downloadButton) downloadButton.textContent = 'Download Video';
-        if (fileInputLabel) fileInputLabel.textContent = 'Conditioning Image (Optional)';
-    } else { // image
-        if (videoSettings) videoSettings.style.display = 'none';
-        if (imageSettings) imageSettings.style.display = 'block';
-        if (generateButton) generateButton.textContent = 'Generate Image';
-        if (downloadButton) downloadButton.textContent = 'Download Image';
-        if (fileInputLabel) fileInputLabel.textContent = 'Input Image (Optional for editing)';
-    }
-}
-
 function clearPreview() {
     if (previewContainer) previewContainer.style.display = 'none';
     if (imagePreview) {
@@ -1272,7 +1170,6 @@ async function handleFileUpload(e: Event) {
     const isImage = file.type.startsWith('image/');
 
     if (isImage) {
-      // Images can be used for both image and video generation
       if (previewContainer) previewContainer.style.display = 'block';
       base64data = await blobToBase64(file);
       mimeType = file.type;
@@ -1282,8 +1179,7 @@ async function handleFileUpload(e: Event) {
         imagePreview.style.display = 'block';
       }
       
-      const modeText = generationType === 'image' ? 'for editing' : 'for video generation';
-      if (statusEl) statusEl.textContent = `Image loaded ${modeText}.`;
+      if (statusEl) statusEl.textContent = `Image loaded for editing.`;
       if (generateButton) generateButton.disabled = currentPromptText.trim() === '';
     } else {
       clearPreview();
@@ -1301,65 +1197,6 @@ function blobToBase64(blob: Blob) {
     };
     reader.readAsDataURL(blob);
   });
-}
-
-async function generateVideoContent(prompt, imageBytes, mimeType, durationSecs, quality, aspectRatio) {
-  const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
-  const config: any = { model: 'veo-2.0-generate-001', prompt, config: { numberOfVideos: 1, durationSeconds: durationSecs, quality, aspectRatio, motionBlurStrength: userSettings.motionBlurStrength }};
-  if (imageBytes && mimeType) config.image = { imageBytes, mimeType };
-
-  let operation = await ai.models.generateVideos(config);
-
-  const generatingMessages = ['Warming up the pixels...', 'Choreographing the digital dancers...', 'Untangling the quantum film...'];
-  let messageIndex = 0;
-  if (statusEl) statusEl.innerText = generatingMessages[messageIndex];
-  const messageInterval = setInterval(() => {
-    messageIndex = (messageIndex + 1) % generatingMessages.length;
-    if (statusEl) statusEl.innerText = generatingMessages[messageIndex];
-  }, 3000);
-
-  while (!operation.done) {
-    await new Promise(resolve => setTimeout(resolve, 10000));
-    operation = await ai.operations.getVideosOperation({operation});
-  }
-  clearInterval(messageInterval);
-
-  const v = operation.response?.generatedVideos?.[0];
-  if (!v || !v.video || !v.video.uri) throw new Error('No videos generated or video URI is missing.');
-
-  if (statusEl) statusEl.innerText = 'Finalizing video...';
-  
-  const fetchUrl = `${v.video.uri}&key=${GEMINI_API_KEY}`;
-  
-  // Fetch the video data and create a Blob URL for reliable playback.
-  try {
-      const response = await fetch(fetchUrl);
-      if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to fetch video: ${response.status} ${response.statusText}. Details: ${errorText}`);
-      }
-      const videoBlob = await response.blob();
-      const blobUrl = URL.createObjectURL(videoBlob);
-        
-      if (video) {
-        // Use blob for immediate playback
-        video.src = blobUrl;
-        video.style.display = 'block';
-      }
-      if (resultImage) resultImage.style.display = 'none';
-      if (resultsContainer) resultsContainer.style.display = 'block';
-      if (statusEl) statusEl.innerText = 'Video generated successfully!';
-      if (saveCreationButton) saveCreationButton.disabled = false;
-      if (shareButton) shareButton.disabled = false;
-      if (viewCreationButton) viewCreationButton.disabled = false;
-      
-      // Store the original fetchable URL for downloading and saving.
-      // This is more persistent than a temporary blob URL.
-      currentCreation = { data: fetchUrl, type: 'video' };
-  } catch (fetchError) {
-      console.error('Error fetching/playing video content:', fetchError);
-      throw new Error(`The generated video could not be loaded. Details: ${(fetchError as Error).message}`);
-  }
 }
 
 function applyWatermark(imageUrl: string): Promise<string> {
@@ -1437,7 +1274,6 @@ async function generateImageContent() {
         resultImage.src = imageUrl;
         resultImage.style.display = 'block';
     }
-    if (video) video.style.display = 'none';
     if (resultsContainer) resultsContainer.style.display = 'block';
     if (saveCreationButton) saveCreationButton.disabled = false;
     if (shareButton) shareButton.disabled = false;
@@ -1449,17 +1285,14 @@ async function generate() {
   if (currentPromptText.trim() === '') {
     showErrorModal(['Please enter a prompt.']); return;
   }
-  if (generationType === 'image') {
-    const explicitWords = ['explicit', 'forbidden', 'banned', 'inappropriate'];
-    if (explicitWords.some(word => currentPromptText.toLowerCase().includes(word))) {
-      if (statusEl) statusEl.innerText = 'Image creation out of line.'; return;
-    }
+  const explicitWords = ['explicit', 'forbidden', 'banned', 'inappropriate'];
+  if (explicitWords.some(word => currentPromptText.toLowerCase().includes(word))) {
+    if (statusEl) statusEl.innerText = 'Image creation out of line.'; return;
   }
 
   if (spinnerContainer) spinnerContainer.style.display = 'flex';
   if (statusEl) statusEl.innerText = '';
   if (resultsContainer) resultsContainer.style.display = 'none';
-  if (video) video.src = '';
   if (resultImage) resultImage.src = '';
   if (saveCreationButton) saveCreationButton.disabled = true;
   if (shareButton) shareButton.disabled = true;
@@ -1468,17 +1301,9 @@ async function generate() {
   setControlsDisabled(true);
 
   try {
-    if (generationType === 'video') {
-        const duration = parseInt(durationSlider.value, 10);
-        const quality = userSettings.videoQuality;
-        const aspectRatio = videoAspectRatioSelect.value;
-        await generateVideoContent(currentPromptText, base64data, mimeType, duration, quality, aspectRatio);
-    } else {
-        await generateImageContent();
-    }
+    await generateImageContent();
   } catch (e) {
-    console.error(`${generationType} generation failed:`, e);
-    const type = generationType.charAt(0).toUpperCase() + generationType.slice(1);
+    console.error(`Image generation failed:`, e);
     
     let rawErrorMessage = 'An unknown error occurred.';
     if (e instanceof Error) {
@@ -1492,15 +1317,13 @@ async function generate() {
     if (rawErrorMessage.toLowerCase().includes('quota exceeded') || rawErrorMessage.toLowerCase().includes('resource_exhausted')) {
         showErrorModal(
             [
-                'The API key has reached its usage limit for video generation. Please check your Google AI Studio account for details on your quota.',
-                'You may still be able to generate images.'
+                'The API key has reached its usage limit. Please check your Google AI Studio account for details on your quota.',
             ],
             'API Quota Exceeded'
         );
     } else {
         let displayMessage = rawErrorMessage;
         try {
-            // Try to parse if it's a JSON string to get a cleaner message
             const parsed = JSON.parse(rawErrorMessage);
             if (parsed.error && parsed.error.message) {
                 displayMessage = parsed.error.message;
@@ -1508,10 +1331,10 @@ async function generate() {
         } catch (parseError) {
             // Not a JSON string, use the raw message which is fine.
         }
-        showErrorModal([displayMessage], `${type} Generation Failed`);
+        showErrorModal([displayMessage], `Image Generation Failed`);
     }
     
-    if (statusEl) statusEl.innerText = `Error generating ${generationType}.`;
+    if (statusEl) statusEl.innerText = `Error generating image.`;
   } finally {
     if (spinnerContainer) spinnerContainer.style.display = 'none';
     setControlsDisabled(false);
@@ -1575,19 +1398,6 @@ function setupSettingsNavigation() {
     });
 }
 
-function getMotionBlurLabel(value: number): string {
-    if (value === 0) return 'Off';
-    if (value <= 0.3) return 'Low';
-    if (value <= 0.7) return 'Medium';
-    return 'High';
-}
-
-function updateMotionBlurValueDisplay(value: number) {
-    if (settingMotionBlurValue) {
-        settingMotionBlurValue.textContent = `${getMotionBlurLabel(value)} (${value.toFixed(1)})`;
-    }
-}
-
 function openSettingsModal() {
     if (!settingsModal || !currentUser) return;
     
@@ -1609,11 +1419,6 @@ function openSettingsModal() {
     toggleAddCardView(false); // Ensure card list is shown by default
 
     // Populate Generation Settings
-    if (settingVideoQualitySelect) settingVideoQualitySelect.value = userSettings.videoQuality;
-    if (settingMotionBlurSlider) {
-        settingMotionBlurSlider.value = String(userSettings.motionBlurStrength);
-        updateMotionBlurValueDisplay(userSettings.motionBlurStrength);
-    }
     if (settingImageAspectRatioSelect) settingImageAspectRatioSelect.value = userSettings.imageAspectRatio;
     if (settingImageFormatSelect) settingImageFormatSelect.value = userSettings.imageFormat;
     if (settingWatermarkToggle) {
@@ -1734,8 +1539,6 @@ async function handlePasswordUpdate(e: Event) {
 
 function handleGenerationSettingsUpdate(e: Event) {
     e.preventDefault();
-    userSettings.videoQuality = settingVideoQualitySelect.value;
-    userSettings.motionBlurStrength = parseFloat(settingMotionBlurSlider.value);
     userSettings.imageAspectRatio = settingImageAspectRatioSelect.value;
     userSettings.imageFormat = settingImageFormatSelect.value;
     if (!userState.isPremium) {
@@ -1838,7 +1641,7 @@ function handleDownload() {
     const a = document.createElement('a');
     a.href = currentCreation.data;
     
-    const fileExtension = currentCreation.type === 'video' ? 'mp4' : userSettings.imageFormat.split('/')[1];
+    const fileExtension = userSettings.imageFormat.split('/')[1];
     a.download = `creation-${Date.now()}.${fileExtension}`;
     document.body.appendChild(a);
     a.click();
@@ -1886,7 +1689,7 @@ async function handleShare() {
     if (!currentCreation.data) return;
     
     const blob = await fetch(currentCreation.data).then(res => res.blob());
-    const file = new File([blob], `creation.${currentCreation.type === 'video' ? 'mp4' : 'jpg'}`, { type: blob.type });
+    const file = new File([blob], `creation.jpg`, { type: blob.type });
 
     if (navigator.share && navigator.canShare({ files: [file] })) {
         try {
@@ -1908,7 +1711,6 @@ async function handleShare() {
     }
 }
 
-// FIX: Add missing function definitions for creations gallery.
 function updateSelectionToolbar() {
     if (!creationsGallery || !creationsSelectionToolbar) return;
     const selectedCheckboxes = creationsGallery.querySelectorAll('.creation-checkbox:checked');
@@ -1945,7 +1747,7 @@ function renderCreations(page: number) {
     if (!currentUser || !creationsGallery) return;
 
     creationsCurrentPage = page;
-    const creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
+    let creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]').filter(c => c.type === 'image');
     
     creationsGallery.innerHTML = ''; // Clear previous content
 
@@ -1970,18 +1772,9 @@ function renderCreations(page: number) {
         creationEl.className = 'creation-item';
         creationEl.dataset.id = String(creation.id);
         
-        let mediaEl;
-        if (creation.type === 'video') {
-            mediaEl = document.createElement('video');
-            mediaEl.src = creation.data;
-            mediaEl.muted = true;
-            mediaEl.loop = true;
-            mediaEl.playsInline = true;
-        } else {
-            mediaEl = document.createElement('img');
-            mediaEl.src = creation.data;
-            mediaEl.alt = creation.prompt;
-        }
+        let mediaEl = document.createElement('img');
+        mediaEl.src = creation.data;
+        mediaEl.alt = creation.prompt;
 
         creationEl.innerHTML = `
             <div class="creation-media-wrapper">
@@ -2002,48 +1795,26 @@ function renderCreations(page: number) {
         creationsGallery.appendChild(creationEl);
     });
     
-    // Add event listeners after appending all elements
-    // FIX: Add generic type to querySelectorAll to ensure correct element types are inferred by TypeScript, allowing access to `dataset`.
     creationsGallery.querySelectorAll<HTMLElement>('.creation-item').forEach(item => {
         const creationId = parseInt(item.dataset.id || '0', 10);
         const creation = pageCreations.find(c => c.id === creationId);
         if (!creation) return;
 
-        item.addEventListener('mouseenter', () => {
-            const video = item.querySelector('video');
-            if (video) video.play().catch(e => {});
-        });
-
-        item.addEventListener('mouseleave', () => {
-            const video = item.querySelector('video');
-            if (video) video.pause();
-        });
-
         const mediaWrapper = item.querySelector('.creation-media-wrapper');
         if (mediaWrapper) {
             mediaWrapper.addEventListener('click', (e) => {
-                // Don't open large view if clicking checkbox inside the wrapper
                 if ((e.target as HTMLElement).tagName === 'INPUT') return;
 
                 if (largeViewModal && largeViewImage && largeViewVideo) {
                     largeViewModal.style.display = 'flex';
-                    if (creation.type === 'image') {
-                        largeViewImage.src = creation.data;
-                        largeViewImage.style.display = 'block';
-                        largeViewVideo.style.display = 'none';
-                        largeViewVideo.src = '';
-                    } else {
-                        largeViewVideo.src = creation.data;
-                        largeViewVideo.controls = true;
-                        largeViewVideo.style.display = 'block';
-                        largeViewImage.style.display = 'none';
-                        largeViewImage.src = '';
-                    }
+                    largeViewImage.src = creation.data;
+                    largeViewImage.style.display = 'block';
+                    largeViewVideo.style.display = 'none';
+                    largeViewVideo.src = '';
                 }
             });
         }
         
-
         const checkbox = item.querySelector('.creation-checkbox');
         if (checkbox) checkbox.addEventListener('change', updateSelectionToolbar);
 
@@ -2055,7 +1826,6 @@ function renderCreations(page: number) {
         });
     });
 
-    // Update pagination controls
     if (creationsPaginationControls) {
         creationsPaginationControls.style.display = totalPages > 1 ? 'flex' : 'none';
         if (creationsPageInfo) creationsPageInfo.textContent = `Page ${page} of ${totalPages}`;
@@ -2066,7 +1836,7 @@ function renderCreations(page: number) {
     updateSelectionToolbar();
 }
 
-function openCreationsModal(showLast: boolean = false) {
+function openCreationsModal() {
     if (!userState.isPremium) {
         showErrorModal(['Viewing saved creations is a Premium feature.'], 'Premium Feature');
         subscriptionModal.style.display = 'flex';
@@ -2075,6 +1845,121 @@ function openCreationsModal(showLast: boolean = false) {
     renderCreations(1);
     creationsModal.style.display = 'flex';
 }
+
+// --- Chat ---
+function parseSimpleMarkdown(text: string): string {
+    return text
+        .replace(/```([\s\S]*?)```/g, (_match, code) => `<pre><code>${code.trim()}</code></pre>`)
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>');
+}
+
+
+function renderChatMessage(message: string, role: 'user' | 'model', sources?: any[]) {
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = `chat-message ${role}`;
+
+    const messageContent = document.createElement('div');
+    messageContent.className = 'chat-message-content';
+    
+    if (role === 'model' && isChatLoading) {
+        messageContent.innerHTML = `
+            <div class="chat-loading-indicator">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        `;
+    } else {
+        messageContent.innerHTML = parseSimpleMarkdown(message);
+    }
+    
+    messageWrapper.appendChild(messageContent);
+
+    if (sources && sources.length > 0) {
+        const sourcesContainer = document.createElement('div');
+        sourcesContainer.className = 'grounding-sources';
+        sourcesContainer.innerHTML = '<strong>Sources:</strong>';
+        const sourcesList = document.createElement('ol');
+        sources.forEach(source => {
+            if (source.web && source.web.uri) {
+                const li = document.createElement('li');
+                li.innerHTML = `<a href="${source.web.uri}" target="_blank" rel="noopener noreferrer" class="source-link">${source.web.title || source.web.uri}</a>`;
+                sourcesList.appendChild(li);
+            }
+        });
+        sourcesContainer.appendChild(sourcesList);
+        messageWrapper.appendChild(sourcesContainer);
+    }
+
+    chatHistoryEl.appendChild(messageWrapper);
+    chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+    return messageWrapper;
+}
+
+async function handleChatSubmit(e?: Event) {
+    if (e) e.preventDefault();
+    if (isChatLoading || chatInput.value.trim() === '') return;
+
+    const userInput = chatInput.value.trim();
+    chatHistory.push({ role: 'user', parts: [{ text: userInput }] });
+    renderChatMessage(userInput, 'user');
+    
+    chatInput.value = '';
+    chatInput.style.height = 'auto';
+    chatSendButton.disabled = true;
+    isChatLoading = true;
+    
+    const loadingIndicator = renderChatMessage('', 'model');
+
+    try {
+        const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: chatHistory,
+            config: {
+                tools: [{googleSearch: {}}],
+            },
+        });
+
+        const modelResponse = response.text;
+        const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+        
+        chatHistory.push({ role: 'model', parts: [{ text: modelResponse }] });
+        
+        // Update the loading indicator with the actual response
+        const messageContent = loadingIndicator.querySelector('.chat-message-content') as HTMLDivElement;
+        if(messageContent) messageContent.innerHTML = parseSimpleMarkdown(modelResponse);
+        if (groundingChunks && groundingChunks.length > 0) {
+            const sourcesContainer = document.createElement('div');
+            sourcesContainer.className = 'grounding-sources';
+            sourcesContainer.innerHTML = '<strong>Sources:</strong>';
+            const sourcesList = document.createElement('ol');
+            groundingChunks.forEach(source => {
+                 if (source.web && source.web.uri) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<a href="${source.web.uri}" target="_blank" rel="noopener noreferrer" class="source-link">${source.web.title || source.web.uri}</a>`;
+                    sourcesList.appendChild(li);
+                }
+            });
+            sourcesContainer.appendChild(sourcesList);
+            loadingIndicator.appendChild(sourcesContainer);
+        }
+
+    } catch (err) {
+        const errorMessage = (err as Error).message || 'An unknown error occurred.';
+        const errorContent = loadingIndicator.querySelector('.chat-message-content') as HTMLDivElement;
+        if(errorContent) {
+            errorContent.innerHTML = `Sorry, something went wrong. Please try again. <br><small>Error: ${errorMessage}</small>`;
+            errorContent.style.color = 'var(--danger-color)';
+        }
+    } finally {
+        isChatLoading = false;
+        chatSendButton.disabled = false;
+        chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+    }
+}
+
 
 function setupEventListeners() {
     // --- Auth ---
@@ -2092,6 +1977,17 @@ function setupEventListeners() {
     });
     setupAuthLegalTabs();
 
+    // --- Main Navigation ---
+    [imageNavButton, chatNavButton].forEach(button => {
+        button.addEventListener('click', () => {
+            const view = button.dataset.view;
+            imageGeneratorView.style.display = view === 'image' ? 'block' : 'none';
+            chatView.style.display = view === 'chat' ? 'flex' : 'none';
+            imageNavButton.classList.toggle('active', view === 'image');
+            chatNavButton.classList.toggle('active', view === 'chat');
+        });
+    });
+
     // --- Main UI & Generation ---
     if (generateButton) generateButton.addEventListener('click', generate);
     if (aiAssistButton) aiAssistButton.addEventListener('click', handleAiAssist);
@@ -2107,20 +2003,32 @@ function setupEventListeners() {
             promptEl.dispatchEvent(new Event('input', { bubbles: true }));
         }
     });
-    generationTypeRadios.forEach(radio => {
-        radio.addEventListener('change', handleGenerationTypeChange);
-    });
     if (upload) upload.addEventListener('change', handleFileUpload);
     if (clearPreviewButton) clearPreviewButton.addEventListener('click', clearPreview);
-    if (durationSlider) durationSlider.addEventListener('input', (e) => {
-        if (durationValue) durationValue.textContent = `${(e.target as HTMLInputElement).value}s`;
-    });
     
+    // --- Chat ---
+    if (chatForm) chatForm.addEventListener('submit', handleChatSubmit);
+    if (chatInput) {
+        chatInput.addEventListener('input', () => {
+            if (chatSendButton) {
+                chatSendButton.disabled = chatInput.value.trim() === '';
+            }
+            chatInput.style.height = 'auto';
+            chatInput.style.height = `${chatInput.scrollHeight}px`;
+        });
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleChatSubmit();
+            }
+        });
+    }
+
     // --- Results Actions ---
     if (downloadButton) downloadButton.addEventListener('click', handleDownload);
     if (saveCreationButton) saveCreationButton.addEventListener('click', handleSaveCreation);
     if (shareButton) shareButton.addEventListener('click', handleShare);
-    if (viewCreationButton) viewCreationButton.addEventListener('click', () => openCreationsModal(true));
+    if (viewCreationButton) viewCreationButton.addEventListener('click', () => openCreationsModal());
 
     // --- Daily Prompts ---
     if (refreshPromptsButton) refreshPromptsButton.addEventListener('click', populateDailyPrompts);
@@ -2153,7 +2061,6 @@ function setupEventListeners() {
     if(creationsModalCloseButton) creationsModalCloseButton.addEventListener('click', () => { if(creationsModal) creationsModal.style.display = 'none' });
     if(largeViewCloseButton) largeViewCloseButton.addEventListener('click', () => { if(largeViewModal) largeViewModal.style.display = 'none' });
     if(shareFallbackCloseButton) shareFallbackCloseButton.addEventListener('click', () => { if(shareFallbackModal) shareFallbackModal.style.display = 'none' });
-    if(videoEditorCloseButton) videoEditorCloseButton.addEventListener('click', () => { if(videoEditorModal) videoEditorModal.style.display = 'none'; });
 
     // --- Settings Listeners ---
     setupSettingsNavigation();
@@ -2162,7 +2069,6 @@ function setupEventListeners() {
     if (linksForm) linksForm.addEventListener('submit', handleLinksUpdate);
     if (passwordForm) passwordForm.addEventListener('submit', handlePasswordUpdate);
     if (generationSettingsForm) generationSettingsForm.addEventListener('submit', handleGenerationSettingsUpdate);
-    if (settingMotionBlurSlider) settingMotionBlurSlider.addEventListener('input', (e) => updateMotionBlurValueDisplay(parseFloat((e.target as HTMLInputElement).value)));
     if (notificationsForm) notificationsForm.addEventListener('submit', handleNotificationsUpdate);
     if (settingDarkModeToggle) settingDarkModeToggle.addEventListener('change', handleThemeToggle);
     if (languageRegionForm) languageRegionForm.addEventListener('submit', handleLanguageRegionUpdate);
