@@ -568,20 +568,38 @@ p {
 }
 
 
-#prompt-container, #upload-container {
-    margin-bottom: 1.5rem;
+#image-generator-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* NEW: Generation Sections */
+.generation-section {
+  background-color: var(--subtle-background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+}
+
+.generation-section-title {
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 0 0 1rem 0;
+  color: var(--text-color);
 }
 
 label {
     display: block;
     font-weight: 500;
     margin-bottom: 0.5rem;
+    font-size: 0.9rem;
 }
 
 textarea, select {
   width: 100%;
-  padding: 10px;
-  border-radius: 4px;
+  padding: 10px 12px;
+  border-radius: 6px;
   border: 1px solid var(--border-color);
   font-family: inherit;
   font-size: 1rem;
@@ -591,8 +609,36 @@ textarea, select {
   color: var(--text-color);
 }
 
+/* NEW: Modern Select Styles */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 12px;
+  padding-right: 2.5rem;
+}
+[data-theme="dark"] select {
+   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%239aa0a6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+
+
+.example-prompts-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+.example-prompts-divider {
+    font-size: 0.9rem;
+    color: var(--subtle-text-color);
+    font-weight: 500;
+}
 #example-prompts-select {
-  margin-top: 0.75rem;
+    margin-top: 0;
+    flex-grow: 1;
 }
 
 textarea:focus, select:focus {
@@ -607,11 +653,14 @@ textarea:focus, select:focus {
 
 #prompt-input {
   padding-right: 48px; /* Make space for the button */
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 .ai-assist-button {
   position: absolute;
-  top: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   right: 8px;
   background: none;
   border: none;
@@ -673,9 +722,9 @@ textarea:focus, select:focus {
   align-items: center;
   gap: 0.5rem;
   padding: 10px 15px;
-  background-color: var(--subtle-background);
+  background-color: var(--card-background);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
   transition: background-color 0.2s, border-color 0.2s;
@@ -683,10 +732,10 @@ textarea:focus, select:focus {
 }
 
 .file-input-button:hover {
-  background-color: rgba(0,0,0,0.1);
+  background-color: rgba(0,0,0,0.05);
 }
 [data-theme="dark"] .file-input-button:hover {
-    background-color: rgba(255,255,255,0.1);
+    background-color: rgba(255,255,255,0.05);
 }
 
 .file-input-button svg {
@@ -706,8 +755,7 @@ textarea:focus, select:focus {
 /* Preview Styles */
 #preview-container {
   position: relative;
-  margin-top: -0.5rem; /* Pull up closer to upload button */
-  margin-bottom: 1.5rem;
+  margin-top: 1rem;
   width: 100%;
 }
 
@@ -717,7 +765,7 @@ textarea:focus, select:focus {
   max-height: 300px;
   object-fit: contain;
   border-radius: 8px;
-  background-color: var(--subtle-background);
+  background-color: var(--card-background);
   box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 
@@ -745,39 +793,27 @@ textarea:focus, select:focus {
   transform: scale(1.1);
 }
 
-/* Settings Styles */
-.settings-fieldset {
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 1rem;
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
+/* NEW: Settings Grid */
+#upload-and-settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
 }
 
-.image-settings-fieldset {
-  padding-bottom: 0.25rem;
-}
-
-
-.settings-fieldset legend {
-  padding: 0 0.5rem;
-  font-weight: 500;
-  color: var(--text-color);
+#image-settings .setting:last-child {
+    margin-bottom: 0;
 }
 
 .setting {
   margin-bottom: 1rem;
 }
 
-.setting:last-child {
-  margin-bottom: 0;
-}
-
 #generate-button {
   background-color: var(--primary-color);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 12px 24px;
   font-size: 1rem;
   font-weight: 500;
@@ -785,7 +821,6 @@ textarea:focus, select:focus {
   width: 100%;
   transition: background-color 0.2s, box-shadow 0.2s;
   display: block;
-  margin-top: 1.5rem;
 }
 
 #generate-button:hover:not(:disabled) {
@@ -1071,6 +1106,24 @@ textarea:focus, select:focus {
     overflow: hidden;
 }
 
+#chat-main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+#chat-main-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 #chat-history {
   flex-grow: 1;
   overflow-y: auto;
@@ -1316,12 +1369,12 @@ textarea:focus, select:focus {
   box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-#modal-close-button, #cancel-delete-button {
+#modal-close-button, #cancel-delete-button, #pin-modal-close-button {
     background-color: var(--subtle-background);
     color: var(--text-color);
 }
 
-#modal-close-button:hover, #cancel-delete-button:hover {
+#modal-close-button:hover, #cancel-delete-button:hover, #pin-modal-close-button:hover {
     background-color: var(--border-color);
 }
 
@@ -1493,41 +1546,89 @@ textarea:focus, select:focus {
     margin-bottom: 1rem;
     font-weight: 500;
 }
-#modal-cards-list-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    max-height: 200px;
-    overflow-y: auto;
-}
-.modal-card-option {
+#paypal-payment-button {
     display: flex;
     align-items: center;
-    border: 2px solid var(--border-color);
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 12px;
     border-radius: 8px;
-    padding: 0.75rem;
+    border: none;
+    background-color: #0070ba;
+    color: white;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: border-color 0.2s, background-color 0.2s;
+    transition: background-color 0.2s;
 }
-.modal-card-option input[type="radio"] {
-    margin-right: 1rem;
+#paypal-payment-button:hover {
+    background-color: #005ea6;
 }
-.modal-card-option:has(input:checked) {
-    border-color: var(--primary-color);
-    background-color: rgba(66, 133, 244, 0.1);
+#paypal-payment-button svg {
+    width: 24px;
+    height: 24px;
+    fill: white;
 }
-.modal-card-option .card-icon {
-    width: 32px;
-    height: 20px;
-    margin-right: 1rem;
-    object-fit: contain;
-}
-.modal-card-option .card-info {
-    flex-grow: 1;
-}
-.modal-card-option .card-info-main {
+.payment-divider {
+    margin: 1rem 0;
+    text-align: center;
     font-weight: 500;
+    color: var(--subtle-text-color);
+    position: relative;
+}
+.payment-divider::before, .payment-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background-color: var(--border-color);
+}
+.payment-divider::before {
+    left: 0;
+}
+.payment-divider::after {
+    right: 0;
+}
+#card-payment-wrapper {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+}
+#card-payment-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #3c4043;
+    z-index: 2;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+}
+[data-theme="dark"] #card-payment-overlay {
+    background-color: rgba(45, 46, 48, 0.7);
+    color: #e8eaed;
+}
+#modal-add-card-form-disabled {
+    filter: blur(2px);
+    pointer-events: none;
+    opacity: 0.6;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--subtle-background);
 }
 
 
@@ -2201,6 +2302,61 @@ input:checked + .toggle-slider:before {
   line-height: 1;
 }
 
+/* Parental PIN Modal Styles */
+.pin-input-container {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.pin-input {
+    width: 50px;
+    height: 60px;
+    font-size: 2rem;
+    text-align: center;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--subtle-background);
+    color: var(--text-color);
+    -moz-appearance: textfield; /* Firefox */
+}
+.pin-input::-webkit-outer-spin-button,
+.pin-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.pin-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2);
+}
+.pin-actions {
+    text-align: right;
+    margin-top: -0.5rem;
+}
+.pin-actions a {
+    font-size: 0.9rem;
+    color: var(--primary-color);
+    text-decoration: none;
+}
+#pin-message {
+    min-height: 1.2rem;
+    margin-top: 1rem;
+    font-weight: 500;
+    color: var(--danger-color);
+}
+
+.pin-input-container.shake {
+    animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
 /* --- Responsive Design --- */
 @media (max-width: 768px) {
   body {
@@ -2280,6 +2436,11 @@ input:checked + .toggle-slider:before {
 
   #chat-sidebar {
     width: 180px;
+  }
+
+  /* NEW: Responsive generation settings grid */
+  #upload-and-settings-grid {
+    grid-template-columns: 1fr;
   }
 }
 

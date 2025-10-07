@@ -143,8 +143,8 @@
     </div>
 
     <div id="image-generator-view">
-        <div id="prompt-container">
-            <label for="prompt-input">Prompt</label>
+        <div class="generation-section" id="prompt-section">
+            <label for="prompt-input" class="generation-section-title">1. Describe your vision</label>
             <div class="prompt-wrapper">
                 <textarea id="prompt-input" rows="3" placeholder="e.g., A cinematic shot of a raccoon chief in tribal attire, leading a war party."></textarea>
                 <button id="ai-assist-button" class="ai-assist-button" title="Enhance with AI" disabled>
@@ -152,58 +152,62 @@
                     <div id="ai-assist-spinner" class="ai-assist-spinner"></div>
                 </button>
             </div>
-            <select id="example-prompts-select" aria-label="Example prompts">
-              <option value="">-- Or try an example --</option>
-              <option value="A majestic lion surveying its kingdom from a cliff at sunrise.">Majestic lion at sunrise...</option>
-              <option value="A futuristic city with flying cars and holographic billboards.">Futuristic city with flying cars...</option>
-              <option value="Epic cinematic shot of a lone samurai facing a dragon on a snowy mountain peak.">Samurai facing a dragon...</option>
-              <option value="A hyper-detailed macro shot of a single snowflake on a red mitten.">Macro shot of a snowflake...</option>
-              <option value="A whimsical watercolor illustration of animals having a tea party in a magical forest.">Watercolor animal tea party...</option>
-              <option value="An astronaut floating in space, gazing at the Earth from afar.">Astronaut gazing at Earth...</option>
-              <option value="A spooky, abandoned Victorian mansion under a full moon, with swirling fog.">Spooky abandoned mansion...</option>
-              <option value="Pixel art animation of a character running through a vibrant 8-bit landscape.">Pixel art 8-bit landscape...</option>
-              <option value="A delicious-looking cheeseburger and fries, studio lighting, photorealistic.">Photorealistic cheeseburger...</option>
-            </select>
-        </div>
-        
-        <div id="upload-container">
-            <label for="file-input" id="file-input-label">Input Image (Optional for editing)</label>
-            <div class="file-input-wrapper">
-              <label for="file-input" class="file-input-button">
-                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
-                <span>Choose File</span>
-              </label>
-              <span id="file-name-display" class="file-name-display">No file chosen</span>
+            <div class="example-prompts-container">
+                <span class="example-prompts-divider">or</span>
+                <select id="example-prompts-select" aria-label="Example prompts">
+                  <option value="">try an example</option>
+                  <option value="A majestic lion surveying its kingdom from a cliff at sunrise.">Majestic lion at sunrise...</option>
+                  <option value="A futuristic city with flying cars and holographic billboards.">Futuristic city with flying cars...</option>
+                  <option value="Epic cinematic shot of a lone samurai facing a dragon on a snowy mountain peak.">Samurai facing a dragon...</option>
+                  <option value="A hyper-detailed macro shot of a single snowflake on a red mitten.">Macro shot of a snowflake...</option>
+                  <option value="A whimsical watercolor illustration of animals having a tea party in a magical forest.">Watercolor animal tea party...</option>
+                  <option value="An astronaut floating in space, gazing at the Earth from afar.">Astronaut gazing at Earth...</option>
+                  <option value="A spooky, abandoned Victorian mansion under a full moon, with swirling fog.">Spooky abandoned mansion...</option>
+                  <option value="Pixel art animation of a character running through a vibrant 8-bit landscape.">Pixel art 8-bit landscape...</option>
+                  <option value="A delicious-looking cheeseburger and fries, studio lighting, photorealistic.">Photorealistic cheeseburger...</option>
+                </select>
             </div>
-            <input type="file" id="file-input" class="sr-only" accept="image/*">
         </div>
 
-        <div id="preview-container" style="display: none;">
-          <img id="image-preview" class="preview-media" alt="Image preview">
-          <button id="clear-preview-button" title="Clear selection">&times;</button>
-        </div>
-        
-        <div id="image-settings">
-             <fieldset class="settings-fieldset image-settings-fieldset">
-                <legend>Image Settings</legend>
-                <div class="setting">
-                    <label for="image-aspect-ratio-select">Aspect Ratio</label>
-                    <select id="image-aspect-ratio-select">
-                        <option value="1:1">1:1 (Square)</option>
-                        <option value="16:9">16:9 (Widescreen)</option>
-                        <option value="9:16">9:16 (Vertical)</option>
-                        <option value="4:3">4:3 (Landscape)</option>
-                        <option value="3:4">3:4 (Portrait)</option>
-                    </select>
+        <div class="generation-section" id="settings-section">
+            <h3 class="generation-section-title">2. Configure your generation</h3>
+            <div id="upload-and-settings-grid">
+                <div id="upload-container">
+                    <label for="file-input" id="file-input-label">Input Image (Optional)</label>
+                    <div class="file-input-wrapper">
+                      <label for="file-input" class="file-input-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
+                        <span>Choose File</span>
+                      </label>
+                      <span id="file-name-display" class="file-name-display">No file chosen</span>
+                    </div>
+                    <input type="file" id="file-input" class="sr-only" accept="image/*">
+                    <div id="preview-container" style="display: none;">
+                      <img id="image-preview" class="preview-media" alt="Image preview">
+                      <button id="clear-preview-button" title="Clear selection">&times;</button>
+                    </div>
                 </div>
-                 <div class="setting">
-                    <label for="image-format-select">Format</label>
-                    <select id="image-format-select">
-                        <option value="image/jpeg">JPEG</option>
-                        <option value="image/png">PNG</option>
-                    </select>
+
+                <div id="image-settings">
+                    <div class="setting">
+                        <label for="image-aspect-ratio-select">Aspect Ratio</label>
+                        <select id="image-aspect-ratio-select">
+                            <option value="1:1">1:1 (Square)</option>
+                            <option value="16:9">16:9 (Widescreen)</option>
+                            <option value="9:16">9:16 (Vertical)</option>
+                            <option value="4:3">4:3 (Landscape)</option>
+                            <option value="3:4">3:4 (Portrait)</option>
+                        </select>
+                    </div>
+                     <div class="setting">
+                        <label for="image-format-select">Format</label>
+                        <select id="image-format-select">
+                            <option value="image/jpeg">JPEG</option>
+                            <option value="image/png">PNG</option>
+                        </select>
+                    </div>
                 </div>
-            </fieldset>
+            </div>
         </div>
         
         <button id="generate-button">Generate Image</button>
@@ -246,6 +250,12 @@
             </ul>
         </div>
         <div id="chat-main">
+            <div id="chat-main-header">
+                <h3 id="chat-title">Conversation</h3>
+                <button id="share-chat-button" class="icon-button" title="Share Chat">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3s3-1.34 3-3-1.34-3-3-3z"></path></svg>
+                </button>
+            </div>
             <div id="chat-history">
                 <!-- Messages will be rendered here -->
             </div>
@@ -305,47 +315,42 @@
     </div>
 
     <div id="payment-selection-view" style="display: none;">
-        <h4 class="payment-view-header">Complete Your Purchase</h4>
-        <p id="selected-plan-info"></p>
-        
-        <div id="modal-cards-list-container">
-            <!-- Radio list of cards will be injected here -->
-        </div>
-        <button id="modal-add-card-button" class="settings-utility-button" style="width: 100%; margin-bottom: 1rem;">
-            + Add New Payment Method
-        </button>
+      <h4 class="payment-view-header">Complete Your Purchase</h4>
+      <p id="selected-plan-info"></p>
 
-        <form id="modal-add-card-form" class="settings-form" style="display:none;">
-            <div class="form-group">
-                <input type="text" id="modal-card-number-input" required inputmode="numeric" maxlength="19" placeholder="Card Number">
-            </div>
-            <div class="form-group">
-                <input type="text" id="modal-card-holder-input" required placeholder="Card Holder Name">
-            </div>
-            <div class="form-group-row">
-                <div class="form-group">
-                    <input type="text" id="modal-card-expiry-input" required placeholder="MM/YY" maxlength="5">
-                </div>
-                <div class="form-group">
-                    <input type="text" id="modal-card-cvv-input" required inputmode="numeric" maxlength="4" placeholder="CVV">
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="toggle-switch-label" style="justify-content: flex-start; gap: 0.75rem; font-weight: 400; font-size: 0.9rem;">
-                    <input type="checkbox" id="modal-set-card-default-checkbox" checked>
-                    <span>Save for future payments</span>
-                </label>
-            </div>
-            <div class="form-actions" style="margin-top: 0.5rem;">
-                <button type="button" id="modal-cancel-add-card-button" class="settings-utility-button">Cancel</button>
-                <button type="submit" class="settings-save-button">Save Card</button>
-            </div>
-        </form>
-        
-        <div class="modal-actions" style="margin-top: 1.5rem;">
-            <button id="back-to-plans-button" class="settings-utility-button">Back</button>
-            <button id="confirm-payment-button" class="auth-button"></button>
-        </div>
+      <button id="paypal-payment-button">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3.328 20.355c.236.42.59.748 1.02.992.43.245.92.368 1.446.368h5.992c3.28 0 5.89-1.02 7.74-3.048 1.862-2.04 2.8-4.72 2.8-8.028 0-2.38-.6-4.32-1.788-5.832C18.732 2.29 16.92 1.5 14.736 1.5H8.38c-.58 0-1.07.26-1.446.772-.375.512-.516 1.112-.42 1.788l1.32 9.012c.1.66.015 1.2-.24 1.62-.255.42-.63.63-1.11.63H3.04c-.38 0-.69.11-.93.33-.24.22-.36.5-.36.84 0 .42.15.79.45 1.11L3.33 20.355Zm2.25-15.613c.09-.312.27-.468.528-.468h5.4c1.51 0 2.7.35 3.552 1.05.852.7 1.272 1.71 1.272 3.03 0 2.22-.87 3.85-2.616 4.9-1.746 1.05-3.96 1.57-6.66 1.57h-1.8c-.37 0-.66-.18-.87-.52-.2-.34-.28-.79-.22-1.35l1.11-7.71Z"/></svg>
+          <span>Pay with PayPal</span>
+      </button>
+
+      <div class="payment-divider">OR</div>
+
+      <div id="card-payment-wrapper">
+          <div id="card-payment-overlay">
+              <span>Credit Card Payments Coming Soon!</span>
+          </div>
+          <form id="modal-add-card-form-disabled" class="settings-form">
+              <div class="form-group">
+                  <input type="text" disabled placeholder="Card Number">
+              </div>
+              <div class="form-group">
+                  <input type="text" disabled placeholder="Card Holder Name">
+              </div>
+              <div class="form-group-row">
+                  <div class="form-group">
+                      <input type="text" disabled placeholder="MM/YY">
+                  </div>
+                  <div class="form-group">
+                      <input type="text" disabled placeholder="CVV">
+                  </div>
+              </div>
+              <button class="auth-button" disabled>Pay Now</button>
+          </form>
+      </div>
+      
+      <div class="modal-actions" style="margin-top: 1.5rem; justify-content: center;">
+          <button id="back-to-plans-button" class="settings-utility-button">Back to Plans</button>
+      </div>
     </div>
       <div id="payment-message-container"></div>
       <button id="subscription-modal-close-button">Maybe later</button>
@@ -436,6 +441,7 @@
             <div class="settings-pane" id="pane-password">
                 <h3>Password & Security</h3>
                 <form id="password-form" class="settings-form">
+                    <h4 class="settings-subheader">Change Password</h4>
                     <p class="form-group-description">For your security, we recommend using a strong, unique password.</p>
                     <div class="form-group">
                         <label for="current-password-input">Current Password</label>
@@ -455,6 +461,13 @@
                         <button type="submit" class="settings-save-button">Update Password</button>
                     </div>
                 </form>
+                 <div id="parental-pin-section" class="settings-form">
+                    <h4 class="settings-subheader">Parental PIN</h4>
+                    <p class="form-group-description">Set a 4-digit PIN to authorize PayPal payments and prevent unauthorized purchases.</p>
+                     <div class="form-actions">
+                        <button id="manage-pin-button" class="settings-utility-button">Manage PIN</button>
+                    </div>
+                </div>
             </div>
             <!-- Subscription & Payments Pane -->
             <div class="settings-pane" id="pane-subscription">
@@ -520,16 +533,6 @@
                             <option value="image/jpeg">JPEG</option>
                             <option value="image/png">PNG</option>
                         </select>
-                    </div>
-                    <div class="form-group" id="watermark-setting-container">
-                        <label class="toggle-switch-label">
-                            <span>Apply Watermark (Free Users)</span>
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="setting-watermark-toggle">
-                                <span class="toggle-slider"></span>
-                            </div>
-                        </label>
-                        <small>As a Premium user, your creations are always watermark-free.</small>
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="settings-save-button">Save Generation Settings</button>
@@ -745,6 +748,50 @@
         </div>
     </div>
   </div>
+</div>
+
+<div id="parental-pin-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 400px;">
+        <h3 id="pin-modal-title">Enter PIN</h3>
+        <p id="pin-modal-subtitle">A PIN is required to authorize this payment.</p>
+        
+        <div id="pin-modal-view-container">
+            <!-- Enter PIN View -->
+            <div id="pin-enter-view" class="pin-modal-view">
+                 <div id="pin-input-container">
+                    <input type="number" class="pin-input" maxlength="1" inputmode="numeric">
+                    <input type="number" class="pin-input" maxlength="1" inputmode="numeric">
+                    <input type="number" class="pin-input" maxlength="1" inputmode="numeric">
+                    <input type="number" class="pin-input" maxlength="1" inputmode="numeric">
+                </div>
+                <div class="pin-actions">
+                  <a href="#" id="forgot-pin-link">Forgot PIN?</a>
+                </div>
+            </div>
+            <!-- Set PIN View -->
+            <div id="pin-set-view" class="pin-modal-view" style="display: none;">
+                 <div id="pin-set-input-container" class="pin-input-container">
+                    <input type="number" class="pin-input" maxlength="1" inputmode="numeric">
+                    <input type="number" class="pin-input" maxlength="1" inputmode="numeric">
+                    <input type="number" class="pin-input" maxlength="1" inputmode="numeric">
+                    <input type="number" class="pin-input" maxlength="1" inputmode="numeric">
+                </div>
+                 <div id="pin-confirm-input-container" class="pin-input-container" style="display: none;">
+                    <input type="number" class="pin-input" maxlength="1" inputmode="numeric">
+                    <input type="number" class="pin-input" maxlength="1" inputmode="numeric">
+                    <input type="number" class="pin-input" maxlength="1" inputmode="numeric">
+                    <input type="number" class="pin-input" maxlength="1" inputmode="numeric">
+                </div>
+                <div class="pin-actions">
+                  <button id="set-pin-button" class="auth-button">Set PIN</button>
+                </div>
+            </div>
+        </div>
+        <div id="pin-message"></div>
+        <div class="modal-actions" style="margin-top: 1.5rem;">
+            <button id="pin-modal-close-button" class="settings-utility-button">Cancel</button>
+        </div>
+    </div>
 </div>
 
 <script type="module" src="index.js"></script>

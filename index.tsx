@@ -62,7 +62,6 @@ let userState = {
 let userSettings = {
     imageAspectRatio: '1:1',
     imageFormat: 'image/jpeg',
-    watermark: true,
     notifications: {
         featureUpdates: true,
         exportAlerts: true,
@@ -84,6 +83,8 @@ let creationsCurrentPage = 1;
 let conversations: Conversation[] = [];
 let activeConversationId: string | null = null;
 let isChatLoading = false;
+let pinAction: 'payment' | 'settings' | null = null;
+
 
 // --- DOM Elements ---
 let mainContent: HTMLElement;
@@ -139,6 +140,9 @@ let chatSidebar: HTMLDivElement;
 let newChatButton: HTMLButtonElement;
 let chatList: HTMLUListElement;
 let chatMain: HTMLDivElement;
+let chatMainHeader: HTMLDivElement;
+let chatTitleEl: HTMLHeadingElement;
+let shareChatButton: HTMLButtonElement;
 let chatHistoryEl: HTMLDivElement;
 let chatForm: HTMLFormElement;
 let chatInput: HTMLTextAreaElement;
@@ -211,8 +215,6 @@ let xLinkInput: HTMLInputElement;
 let instagramLinkInput: HTMLInputElement;
 let settingImageAspectRatioSelect: HTMLSelectElement;
 let settingImageFormatSelect: HTMLSelectElement;
-let settingWatermarkToggle: HTMLInputElement;
-let watermarkSettingContainer: HTMLDivElement;
 let settingNotificationsFeatures: HTMLInputElement;
 let settingNotificationsExports: HTMLInputElement;
 let settingNotificationsCommunity: HTMLInputElement;
@@ -232,6 +234,7 @@ let deleteAccountModal: HTMLDivElement;
 let deleteConfirmInput: HTMLInputElement;
 let cancelDeleteButton: HTMLButtonElement;
 let confirmDeleteButton: HTMLButtonElement;
+let managePinButton: HTMLButtonElement;
 
 // Large View Modal Elements
 let largeViewModal: HTMLDivElement;
@@ -247,16 +250,9 @@ let planSelectionView: HTMLDivElement;
 let paymentSelectionView: HTMLDivElement;
 let selectedPlanInfo: HTMLParagraphElement;
 let backToPlansButton: HTMLButtonElement;
-let modalCardsListContainer: HTMLDivElement;
-let modalAddCardButton: HTMLButtonElement;
-let modalAddCardForm: HTMLFormElement;
-let confirmPaymentButton: HTMLButtonElement;
-let modalCardNumberInput: HTMLInputElement;
-let modalCardHolderInput: HTMLInputElement;
-let modalCardExpiryInput: HTMLInputElement;
-let modalCardCvvInput: HTMLInputElement;
-let modalSetCardDefaultCheckbox: HTMLInputElement;
-let modalCancelAddCardButton: HTMLButtonElement;
+let paypalPaymentButton: HTMLButtonElement;
+let cardPaymentOverlay: HTMLDivElement;
+
 
 // Subscription & Payment Settings
 let subscriptionStatusContainer: HTMLDivElement;
@@ -270,6 +266,22 @@ let cardHolderInput: HTMLInputElement;
 let cardExpiryInput: HTMLInputElement;
 let cardCvvInput: HTMLInputElement;
 let setCardDefaultCheckbox: HTMLInputElement;
+
+// Parental PIN Modal Elements
+let parentalPinModal: HTMLDivElement;
+let pinModalCloseButton: HTMLButtonElement;
+let pinModalTitle: HTMLHeadingElement;
+let pinModalSubtitle: HTMLParagraphElement;
+let pinModalViewContainer: HTMLDivElement;
+let pinEnterView: HTMLDivElement;
+let pinSetView: HTMLDivElement;
+let pinInputContainer: HTMLDivElement;
+let pinSetInputContainer: HTMLDivElement;
+let pinConfirmInputContainer: HTMLDivElement;
+let pinInputs: NodeListOf<HTMLInputElement>;
+let setPinButton: HTMLButtonElement;
+let forgotPinLink: HTMLAnchorElement;
+let pinMessage: HTMLDivElement;
 
 
 // --- Function Definitions ---
@@ -329,6 +341,9 @@ function cacheDOMElements() {
     newChatButton = document.querySelector('#new-chat-button') as HTMLButtonElement;
     chatList = document.querySelector('#chat-list') as HTMLUListElement;
     chatMain = document.querySelector('#chat-main') as HTMLDivElement;
+    chatMainHeader = document.querySelector('#chat-main-header') as HTMLDivElement;
+    chatTitleEl = document.querySelector('#chat-title') as HTMLHeadingElement;
+    shareChatButton = document.querySelector('#share-chat-button') as HTMLButtonElement;
     chatHistoryEl = document.querySelector('#chat-history') as HTMLDivElement;
     chatForm = document.querySelector('#chat-form') as HTMLFormElement;
     chatInput = document.querySelector('#chat-input') as HTMLTextAreaElement;
@@ -399,8 +414,6 @@ function cacheDOMElements() {
     instagramLinkInput = document.querySelector('#instagram-link-input') as HTMLInputElement;
     settingImageAspectRatioSelect = document.querySelector('#setting-image-aspect-ratio') as HTMLSelectElement;
     settingImageFormatSelect = document.querySelector('#setting-image-format') as HTMLSelectElement;
-    settingWatermarkToggle = document.querySelector('#setting-watermark-toggle') as HTMLInputElement;
-    watermarkSettingContainer = document.querySelector('#watermark-setting-container') as HTMLDivElement;
     settingNotificationsFeatures = document.querySelector('#setting-notifications-features') as HTMLInputElement;
     settingNotificationsExports = document.querySelector('#setting-notifications-exports') as HTMLInputElement;
     settingNotificationsCommunity = document.querySelector('#setting-notifications-community') as HTMLInputElement;
@@ -421,6 +434,7 @@ function cacheDOMElements() {
     deleteConfirmInput = document.querySelector('#delete-confirm-input') as HTMLInputElement;
     cancelDeleteButton = document.querySelector('#cancel-delete-button') as HTMLButtonElement;
     confirmDeleteButton = document.querySelector('#confirm-delete-button') as HTMLButtonElement;
+    managePinButton = document.getElementById('manage-pin-button') as HTMLButtonElement;
 
     // Large View Modal
     largeViewModal = document.querySelector('#large-view-modal') as HTMLDivElement;
@@ -436,16 +450,8 @@ function cacheDOMElements() {
     paymentSelectionView = document.querySelector('#payment-selection-view') as HTMLDivElement;
     selectedPlanInfo = document.querySelector('#selected-plan-info') as HTMLParagraphElement;
     backToPlansButton = document.querySelector('#back-to-plans-button') as HTMLButtonElement;
-    modalCardsListContainer = document.querySelector('#modal-cards-list-container') as HTMLDivElement;
-    modalAddCardButton = document.querySelector('#modal-add-card-button') as HTMLButtonElement;
-    modalAddCardForm = document.querySelector('#modal-add-card-form') as HTMLFormElement;
-    confirmPaymentButton = document.querySelector('#confirm-payment-button') as HTMLButtonElement;
-    modalCardNumberInput = document.querySelector('#modal-card-number-input') as HTMLInputElement;
-    modalCardHolderInput = document.querySelector('#modal-card-holder-input') as HTMLInputElement;
-    modalCardExpiryInput = document.querySelector('#modal-card-expiry-input') as HTMLInputElement;
-    modalCardCvvInput = document.querySelector('#modal-card-cvv-input') as HTMLInputElement;
-    modalSetCardDefaultCheckbox = document.querySelector('#modal-set-card-default-checkbox') as HTMLInputElement;
-    modalCancelAddCardButton = document.querySelector('#modal-cancel-add-card-button') as HTMLButtonElement;
+    paypalPaymentButton = document.getElementById('paypal-payment-button') as HTMLButtonElement;
+    cardPaymentOverlay = document.getElementById('card-payment-overlay') as HTMLDivElement;
 
     // Subscription & Payment Settings
     subscriptionStatusContainer = document.querySelector('#subscription-status-container') as HTMLDivElement;
@@ -459,6 +465,22 @@ function cacheDOMElements() {
     cardExpiryInput = document.querySelector('#card-expiry-input') as HTMLInputElement;
     cardCvvInput = document.querySelector('#card-cvv-input') as HTMLInputElement;
     setCardDefaultCheckbox = document.querySelector('#set-card-default-checkbox') as HTMLInputElement;
+    
+    // Parental PIN Modal
+    parentalPinModal = document.getElementById('parental-pin-modal') as HTMLDivElement;
+    pinModalCloseButton = document.getElementById('pin-modal-close-button') as HTMLButtonElement;
+    pinModalTitle = document.getElementById('pin-modal-title') as HTMLHeadingElement;
+    pinModalSubtitle = document.getElementById('pin-modal-subtitle') as HTMLParagraphElement;
+    pinModalViewContainer = document.getElementById('pin-modal-view-container') as HTMLDivElement;
+    pinEnterView = document.getElementById('pin-enter-view') as HTMLDivElement;
+    pinSetView = document.getElementById('pin-set-view') as HTMLDivElement;
+    pinInputContainer = document.getElementById('pin-input-container') as HTMLDivElement;
+    pinSetInputContainer = document.getElementById('pin-set-input-container') as HTMLDivElement;
+    pinConfirmInputContainer = document.getElementById('pin-confirm-input-container') as HTMLDivElement;
+    pinInputs = parentalPinModal.querySelectorAll('.pin-input');
+    setPinButton = document.getElementById('set-pin-button') as HTMLButtonElement;
+    forgotPinLink = document.getElementById('forgot-pin-link') as HTMLAnchorElement;
+    pinMessage = document.getElementById('pin-message') as HTMLDivElement;
 }
 
 function showErrorModal(messages: string[], title: string = 'An Error Occurred') {
@@ -479,9 +501,9 @@ function showErrorModal(messages: string[], title: string = 'An Error Occurred')
     errorModal.style.display = 'flex';
 }
 
-function showSettingsToast(message: string) {
+function showSettingsToast(message: string, type: 'success' | 'error' = 'success') {
     const toast = document.createElement('div');
-    toast.className = 'settings-toast';
+    toast.className = `settings-toast ${type}`;
     toast.textContent = message;
     document.body.appendChild(toast);
     
@@ -541,7 +563,7 @@ function renderSubscriptionStatus() {
     } else {
         subscriptionStatusContainer.innerHTML = `
             <p>You are on the <strong>Free Plan</strong>.</p>
-            <p>Upgrade to Premium for unlimited downloads, no watermarks, and higher quality exports.</p>
+            <p>Upgrade to Premium for unlimited downloads and higher quality exports.</p>
             <button class="button button-primary" id="settings-upgrade-button">Upgrade to Premium</button>
         `;
         const upgradeButton = document.getElementById('settings-upgrade-button');
@@ -752,7 +774,8 @@ function handleRegister(e: Event) {
             avatar: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2EwYTBiMiIgd2lkdGg9IjgwcHgiIGhlaWdodD0iODBweCI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==',
             links: { facebook: '', x: '', instagram: '' }
         },
-        paymentMethods: []
+        paymentMethods: [],
+        parentalPin: null,
     };
     localStorage.setItem('users', JSON.stringify(users));
     
@@ -939,7 +962,6 @@ function loadUserSettings() {
     userSettings = {
         imageAspectRatio: savedSettings.imageAspectRatio || '1:1',
         imageFormat: savedSettings.imageFormat || 'image/jpeg',
-        watermark: savedSettings.watermark !== undefined ? savedSettings.watermark : !userState.isPremium,
         notifications: savedSettings.notifications || {
             featureUpdates: true,
             exportAlerts: true,
@@ -1000,7 +1022,7 @@ function updateUserStatusUI() {
   }
 }
 
-// --- Payment ---
+// --- Payment & PIN ---
 function handlePlanSelection(selectedPlanElement: HTMLDivElement) {
     pricingPlans.forEach(plan => plan.classList.remove('selected'));
     selectedPlanElement.classList.add('selected');
@@ -1027,68 +1049,24 @@ function showPaymentSelectionView() {
     const planDuration = selectedPremiumPlan === 'monthly' ? '/ month' : '/ year';
 
     selectedPlanInfo.textContent = `Selected Plan: ${planName} (${planPrice}${planDuration})`;
-    if (confirmPaymentButton) confirmPaymentButton.textContent = `Pay ${planPrice}`;
-    
-    populateModalCardsList();
 }
 
-function populateModalCardsList() {
+function handlePayPalPayment() {
     if (!currentUser) return;
     const users = JSON.parse(localStorage.getItem('users') || '{}');
-    const cards = users[currentUser]?.paymentMethods || [];
+    const user = users[currentUser];
 
-    if (cards.length > 0) {
-        modalCardsListContainer.innerHTML = '';
-        cards.forEach((card, index) => {
-             let logoUrl = '';
-            const cardTypeLower = card.type.toLowerCase();
-            if (cardTypeLower === 'visa') {
-                logoUrl = 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg';
-            } else if (cardTypeLower === 'mastercard') {
-                logoUrl = 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg';
-            }
-            const isDefault = card.isDefault || index === 0;
+    pinAction = 'payment';
 
-            const cardLabel = document.createElement('label');
-            cardLabel.className = 'modal-card-option';
-            cardLabel.innerHTML = `
-                <input type="radio" name="payment-method" value="${card.id}" ${isDefault ? 'checked' : ''}>
-                <img src="${logoUrl}" class="card-icon" alt="${card.type}">
-                <div class="card-info">
-                    <div class="card-info-main">
-                      <span>${card.type} ending in ${card.maskedNumber}</span>
-                    </div>
-                </div>
-            `;
-            modalCardsListContainer.appendChild(cardLabel);
-        });
-
-        modalCardsListContainer.style.display = 'flex';
-        modalAddCardButton.style.display = 'block';
-        modalAddCardForm.style.display = 'none';
+    if (user && user.parentalPin) {
+        showPinModal('enter');
     } else {
-        // No cards saved, show the add card form directly
-        modalCardsListContainer.style.display = 'none';
-        modalAddCardButton.style.display = 'none';
-        modalAddCardForm.style.display = 'block';
+        showPinModal('set');
     }
 }
 
-
-async function handleConfirmPayment() {
-  if (paymentMessageContainer) paymentMessageContainer.innerHTML = '';
-  
-  const selectedCard = modalCardsListContainer.querySelector('input[name="payment-method"]:checked');
-  if (!selectedCard && modalAddCardForm.style.display === 'none') {
-      showPaymentMessage('Please select a payment method.', 'error');
-      return;
-  }
-  
+async function processSubscriptionPayment() {
   showPaymentMessage('Processing payment...', 'success');
-  if (confirmPaymentButton) {
-      confirmPaymentButton.disabled = true;
-      confirmPaymentButton.classList.add('processing');
-  }
   
   // Simulate API call
   setTimeout(() => {
@@ -1113,10 +1091,6 @@ async function handleConfirmPayment() {
         planSelectionView.style.display = 'block';
         paymentSelectionView.style.display = 'none';
       }
-      if (confirmPaymentButton) {
-          confirmPaymentButton.disabled = false;
-          confirmPaymentButton.classList.remove('processing');
-      }
       if (paymentMessageContainer) paymentMessageContainer.innerHTML = '';
       
       // Reset plan selection
@@ -1126,35 +1100,6 @@ async function handleConfirmPayment() {
     }, 2000);
   }, 1500);
 }
-
-function handleSaveCardInModal(e: Event) {
-    e.preventDefault();
-    if (!currentUser) return;
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    if (!users[currentUser]) return;
-
-    const cardNumber = modalCardNumberInput.value.replace(/\s/g, '');
-    const shouldSave = modalSetCardDefaultCheckbox.checked;
-
-    if (shouldSave) {
-        const newCard = {
-            id: Date.now(),
-            type: cardNumber.startsWith('4') ? 'Visa' : 'Mastercard',
-            maskedNumber: cardNumber.slice(-4),
-            holderName: modalCardHolderInput.value,
-            isDefault: false, // Don't make default from this flow to avoid confusion
-        };
-
-        let cards = users[currentUser].paymentMethods || [];
-        cards.push(newCard);
-        users[currentUser].paymentMethods = cards;
-        localStorage.setItem('users', JSON.stringify(users));
-    }
-    
-    // After saving (or not), refresh the list view
-    populateModalCardsList();
-}
-
 
 // --- Generation ---
 function clearPreview() {
@@ -1218,40 +1163,6 @@ function blobToBase64(blob: Blob) {
   });
 }
 
-function applyWatermark(imageUrl: string): Promise<string> {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                resolve(imageUrl); // Return original if canvas fails
-                return;
-            }
-            
-            ctx.drawImage(img, 0, 0);
-
-            // Style the watermark
-            ctx.font = `${Math.max(12, Math.min(img.width / 20, 48))}px "Google Sans", sans-serif`;
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'bottom';
-            
-            // Add watermark
-            ctx.fillText('Se-Mo Generation', canvas.width - 15, canvas.height - 15);
-
-            resolve(canvas.toDataURL(userSettings.imageFormat as 'image/png' | 'image/jpeg'));
-        };
-        img.onerror = () => {
-            resolve(imageUrl); // Return original on error
-        };
-        img.src = imageUrl;
-    });
-}
-
 async function generateImageContent() {
     const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
     const aspectRatio = userSettings.imageAspectRatio;
@@ -1285,10 +1196,6 @@ async function generateImageContent() {
         if (statusEl) statusEl.innerText = 'Image generated successfully!';
     }
     
-    if (!userState.isPremium && userSettings.watermark) {
-        imageUrl = await applyWatermark(imageUrl);
-    }
-
     if (resultImage) {
         resultImage.src = imageUrl;
         resultImage.style.display = 'block';
@@ -1440,17 +1347,6 @@ function openSettingsModal() {
     // Populate Generation Settings
     if (settingImageAspectRatioSelect) settingImageAspectRatioSelect.value = userSettings.imageAspectRatio;
     if (settingImageFormatSelect) settingImageFormatSelect.value = userSettings.imageFormat;
-    if (settingWatermarkToggle) {
-        settingWatermarkToggle.checked = userSettings.watermark;
-        // Disable toggle for premium users as watermark is always off
-        if(userState.isPremium && watermarkSettingContainer) {
-            settingWatermarkToggle.disabled = true;
-            watermarkSettingContainer.style.opacity = '0.5';
-        } else if (watermarkSettingContainer) {
-            settingWatermarkToggle.disabled = false;
-            watermarkSettingContainer.style.opacity = '1';
-        }
-    }
 
     // Populate Notifications
     if (settingNotificationsFeatures) settingNotificationsFeatures.checked = userSettings.notifications.featureUpdates;
@@ -1560,10 +1456,6 @@ function handleGenerationSettingsUpdate(e: Event) {
     e.preventDefault();
     userSettings.imageAspectRatio = settingImageAspectRatioSelect.value;
     userSettings.imageFormat = settingImageFormatSelect.value;
-    if (!userState.isPremium) {
-      userSettings.watermark = settingWatermarkToggle.checked;
-    }
-    
     saveUserSettings();
     applyUserSettingsToDashboard();
     showSettingsToast('Generation settings saved!');
@@ -1867,6 +1759,42 @@ function openCreationsModal() {
 }
 
 // --- Chat ---
+async function handleShareChat() {
+    if (!activeConversationId) {
+        showErrorModal(['No active conversation to share.']);
+        return;
+    }
+    const conversation = conversations.find(c => c.id === activeConversationId);
+    if (!conversation || conversation.history.length === 0) {
+        showErrorModal(['This conversation is empty.'], 'Cannot Share');
+        return;
+    }
+
+    const chatText = conversation.history.map(message => {
+        const role = message.role === 'user' ? 'You' : 'Assistant';
+        const text = message.parts.map(part => (part as { text: string }).text).join('');
+        return `${role}:\n${text}\n`;
+    }).join('\n---\n');
+
+    const shareData = {
+        title: `Chat: ${conversation.title}`,
+        text: chatText,
+    };
+
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+        } catch (err) {
+            console.error('Error sharing chat:', err);
+            if ((err as Error).name !== 'AbortError') {
+                 showErrorModal(['Could not share the conversation at this time.'], 'Sharing Failed');
+            }
+        }
+    } else {
+        showErrorModal(['Your browser does not support the Web Share API.'], 'Sharing Not Supported');
+    }
+}
+
 function loadConversations() {
     if (!currentUser) return;
     const saved = localStorage.getItem(`conversations_${currentUser}`);
@@ -1917,6 +1845,7 @@ function handleSwitchChat(id: string) {
     const conversation = conversations.find(c => c.id === id);
     if (conversation) {
         renderChatHistory(conversation.history);
+        if (chatTitleEl) chatTitleEl.textContent = conversation.title;
     }
     renderChatList(); // To update active state styling
 }
@@ -1933,6 +1862,7 @@ function handleNewChat() {
     chatInput.value = '';
     chatInput.dispatchEvent(new Event('input', { bubbles: true }));
     renderChatList(); // To remove active state from list
+    if (chatTitleEl) chatTitleEl.textContent = "New Conversation";
 }
 
 function parseSimpleMarkdown(text: string): string {
@@ -2036,6 +1966,7 @@ async function handleChatSubmit(e?: Event) {
             };
             conversations.unshift(newConversation);
             activeConversationId = newId;
+            if (chatTitleEl) chatTitleEl.textContent = newTitle;
             renderChatList();
         } else {
             const conversation = conversations.find(c => c.id === activeConversationId);
@@ -2125,6 +2056,7 @@ function setupEventListeners() {
     
     // --- Chat ---
     if (newChatButton) newChatButton.addEventListener('click', handleNewChat);
+    if (shareChatButton) shareChatButton.addEventListener('click', handleShareChat);
     if (chatForm) chatForm.addEventListener('submit', handleChatSubmit);
     if (chatInput) {
         chatInput.addEventListener('input', () => {
@@ -2179,6 +2111,7 @@ function setupEventListeners() {
     if(creationsModalCloseButton) creationsModalCloseButton.addEventListener('click', () => { if(creationsModal) creationsModal.style.display = 'none' });
     if(largeViewCloseButton) largeViewCloseButton.addEventListener('click', () => { if(largeViewModal) largeViewModal.style.display = 'none' });
     if(shareFallbackCloseButton) shareFallbackCloseButton.addEventListener('click', () => { if(shareFallbackModal) shareFallbackModal.style.display = 'none' });
+    if (pinModalCloseButton) pinModalCloseButton.addEventListener('click', () => parentalPinModal.style.display = 'none');
 
     // --- Settings Listeners ---
     setupSettingsNavigation();
@@ -2211,6 +2144,27 @@ function setupEventListeners() {
             deleteCreations(idsToDelete);
         }
     });
+
+    // --- Payment & PIN ---
+    pricingPlans.forEach(plan => {
+        plan.addEventListener('click', () => handlePlanSelection(plan));
+    });
+    if (continuePaymentButton) continuePaymentButton.addEventListener('click', showPaymentSelectionView);
+    if (backToPlansButton) backToPlansButton.addEventListener('click', () => {
+        planSelectionView.style.display = 'block';
+        paymentSelectionView.style.display = 'none';
+    });
+    if (paypalPaymentButton) paypalPaymentButton.addEventListener('click', handlePayPalPayment);
+    if (cardPaymentOverlay) cardPaymentOverlay.addEventListener('click', () => {
+        showSettingsToast('Credit card payments are coming soon!', 'success');
+    });
+    if (managePinButton) managePinButton.addEventListener('click', () => {
+      pinAction = 'settings';
+      const users = JSON.parse(localStorage.getItem('users') || '{}');
+      const hasPin = users[currentUser]?.parentalPin;
+      showPinModal(hasPin ? 'enter' : 'set');
+    });
+    setupPinInputs();
 }
 
 // --- Initialization ---
@@ -2226,3 +2180,141 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 1500);
 });
+
+// --- Parental PIN Logic ---
+
+function showPinModal(view: 'set' | 'enter') {
+    if (!parentalPinModal) return;
+
+    // Reset state
+    pinMessage.textContent = '';
+    pinInputs.forEach(input => input.value = '');
+    pinInputContainer.classList.remove('shake');
+    pinSetInputContainer.classList.remove('shake');
+    pinConfirmInputContainer.classList.remove('shake');
+
+    if (view === 'enter') {
+        pinEnterView.style.display = 'block';
+        pinSetView.style.display = 'none';
+        pinModalTitle.textContent = 'Enter Parental PIN';
+        pinModalSubtitle.textContent = 'Please enter your 4-digit PIN to proceed.';
+        (pinEnterView.querySelector('.pin-input') as HTMLElement)?.focus();
+    } else { // 'set'
+        pinEnterView.style.display = 'none';
+        pinSetView.style.display = 'block';
+        setPinButton.style.display = 'block';
+        pinSetInputContainer.style.display = 'flex';
+        pinConfirmInputContainer.style.display = 'none';
+        pinModalTitle.textContent = 'Set Parental PIN';
+        pinModalSubtitle.textContent = 'Create a 4-digit PIN to secure payments.';
+        (pinSetInputContainer.querySelector('.pin-input') as HTMLElement)?.focus();
+    }
+
+    parentalPinModal.style.display = 'flex';
+}
+
+function getPinFromInputs(container: HTMLDivElement): string {
+    const inputs = container.querySelectorAll<HTMLInputElement>('.pin-input');
+    return Array.from(inputs).map(i => i.value).join('');
+}
+
+function clearPinInputs(container: HTMLDivElement) {
+    const inputs = container.querySelectorAll<HTMLInputElement>('.pin-input');
+    inputs.forEach(i => i.value = '');
+    inputs[0]?.focus();
+}
+
+function handlePinConfirm() {
+    if (!currentUser) return;
+    const pin = getPinFromInputs(pinInputContainer);
+    if (pin.length < 4) return;
+
+    const users = JSON.parse(localStorage.getItem('users') || '{}');
+    const storedPin = users[currentUser]?.parentalPin;
+
+    if (pin === storedPin) {
+        parentalPinModal.style.display = 'none';
+        if (pinAction === 'payment') {
+            processSubscriptionPayment();
+        } else if (pinAction === 'settings') {
+             showPinModal('set');
+        }
+    } else {
+        pinMessage.textContent = 'Incorrect PIN. Please try again.';
+        pinInputContainer.classList.add('shake');
+        setTimeout(() => pinInputContainer.classList.remove('shake'), 500);
+        clearPinInputs(pinInputContainer);
+    }
+}
+
+function handlePinSet() {
+    if (!currentUser) return;
+    const newPin = getPinFromInputs(pinSetInputContainer);
+    const confirmPin = getPinFromInputs(pinConfirmInputContainer);
+
+    if (pinConfirmInputContainer.style.display === 'none') {
+        if (newPin.length === 4) {
+            pinModalSubtitle.textContent = 'Confirm your new PIN.';
+            pinSetInputContainer.style.display = 'none';
+            pinConfirmInputContainer.style.display = 'flex';
+            clearPinInputs(pinConfirmInputContainer);
+        } else {
+            pinMessage.textContent = 'PIN must be 4 digits.';
+        }
+    } else {
+        if (confirmPin.length === 4) {
+            if (newPin === confirmPin) {
+                const users = JSON.parse(localStorage.getItem('users') || '{}');
+                users[currentUser].parentalPin = newPin;
+                localStorage.setItem('users', JSON.stringify(users));
+                
+                parentalPinModal.style.display = 'none';
+                showSettingsToast('PIN set successfully!');
+
+                if (pinAction === 'payment') {
+                    processSubscriptionPayment();
+                }
+
+            } else {
+                pinMessage.textContent = "PINs do not match. Please try again.";
+                pinSetInputContainer.style.display = 'flex';
+                pinConfirmInputContainer.style.display = 'none';
+                clearPinInputs(pinSetInputContainer);
+                clearPinInputs(pinConfirmInputContainer);
+                pinModalSubtitle.textContent = 'Create a 4-digit PIN to secure payments.';
+                pinSetView.classList.add('shake');
+                setTimeout(() => pinSetView.classList.remove('shake'), 500);
+            }
+        }
+    }
+}
+
+function setupPinInputs() {
+    pinModalViewContainer.addEventListener('input', (e) => {
+        const target = e.target as HTMLInputElement;
+        if (target.matches('.pin-input') && target.value) {
+            const next = target.nextElementSibling as HTMLInputElement;
+            if (next) {
+                next.focus();
+            }
+        }
+    });
+
+    pinModalViewContainer.addEventListener('keydown', (e) => {
+        const target = e.target as HTMLInputElement;
+        if (e.key === 'Backspace' && !target.value) {
+            const prev = target.previousElementSibling as HTMLInputElement;
+            if (prev) {
+                prev.focus();
+            }
+        }
+    });
+    
+    pinInputContainer.addEventListener('input', handlePinConfirm);
+    setPinButton.addEventListener('click', handlePinSet);
+    forgotPinLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      showSettingsToast('PIN reset instructions sent to your email.', 'success');
+      parentalPinModal.style.display = 'none';
+    });
+}
