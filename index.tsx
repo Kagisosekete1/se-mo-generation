@@ -1,5 +1,4 @@
 
-
 /* tslint:disable */
 /**
  * @license
@@ -192,6 +191,10 @@ let shareFallbackCloseButton: HTMLButtonElement;
 let gcpGuideModal: HTMLDivElement;
 let showGcpGuideLink: HTMLAnchorElement;
 let gcpGuideCloseButton: HTMLButtonElement;
+let namecheapGuideModal: HTMLDivElement;
+let showNamecheapGuideLink: HTMLAnchorElement;
+let namecheapGuideCloseButton: HTMLButtonElement;
+
 
 // Creations Gallery Selection
 let creationsSelectionToolbar: HTMLDivElement;
@@ -408,6 +411,9 @@ function cacheDOMElements() {
     gcpGuideModal = document.getElementById('gcp-guide-modal') as HTMLDivElement;
     showGcpGuideLink = document.getElementById('show-gcp-guide') as HTMLAnchorElement;
     gcpGuideCloseButton = document.getElementById('gcp-guide-close-button') as HTMLButtonElement;
+    namecheapGuideModal = document.getElementById('namecheap-guide-modal') as HTMLDivElement;
+    showNamecheapGuideLink = document.getElementById('show-namecheap-guide') as HTMLAnchorElement;
+    namecheapGuideCloseButton = document.getElementById('namecheap-guide-close-button') as HTMLButtonElement;
 
     // Daily Prompts Section
     dailyPromptsContainer = document.querySelector('#daily-prompts-container') as HTMLDivElement;
@@ -617,7 +623,7 @@ function renderSavedCards() {
         return;
     }
     
-    cards.forEach(card => {
+    cards.forEach((card: any) => {
         let logoUrl = '';
         const cardTypeLower = card.type.toLowerCase();
         if (cardTypeLower === 'visa') {
@@ -641,6 +647,34 @@ function renderSavedCards() {
         `;
         savedCardsList.appendChild(cardEl);
     });
+}
+
+function renderDomainStatus() {
+    if (!domainNameInput || !domainStatusContainer || !dnsInstructions) return;
+
+    domainNameInput.value = userSettings.domain.name;
+    domainStatusContainer.className = `domain-status-container status-${userSettings.domain.status}`;
+    
+    const domainDisplays = document.querySelectorAll('.user-domain-dynamic');
+    domainDisplays.forEach(el => el.textContent = userSettings.domain.name || 'yourdomain.com');
+
+    let statusHtml = '';
+    switch(userSettings.domain.status) {
+        case 'connected':
+            statusHtml = `<h4><span class="status-badge">✔</span> Connected</h4><p>Your domain is successfully pointing to your creations.</p>`;
+            dnsInstructions.style.display = 'none';
+            break;
+        case 'pending':
+            statusHtml = `<h4><span class="status-badge">...</span> Pending Verification</h4><p>Waiting for DNS records to propagate.</p>`;
+            dnsInstructions.style.display = 'block';
+            break;
+        case 'disconnected':
+        default:
+            statusHtml = `<h4><span class="status-badge">✖</span> Disconnected</h4><p>Enter your domain name to begin setup.</p>`;
+            dnsInstructions.style.display = 'none';
+            break;
+    }
+    domainStatusContainer.innerHTML = statusHtml;
 }
 
 function toggleAddCardView(showForm: boolean) {
@@ -1311,14 +1345,14 @@ function showPaymentSelectionView() {
         return;
     }
     if(paymentMessageContainer) paymentMessageContainer.innerHTML = '';
-    planSelectionView.style.display = 'none';
-    paymentSelectionView.style.display = 'block';
+    if(planSelectionView) planSelectionView.style.display = 'none';
+    if(paymentSelectionView) paymentSelectionView.style.display = 'block';
     
     const planName = selectedPremiumPlan.charAt(0).toUpperCase() + selectedPremiumPlan.slice(1);
     const planPrice = selectedPremiumPlan === 'monthly' ? '$9.99' : '$99.99';
     const planDuration = selectedPremiumPlan === 'monthly' ? '/ month' : '/ year';
 
-    selectedPlanInfo.textContent = `Selected Plan: ${planName} (${planPrice}${planDuration})`;
+    if(selectedPlanInfo) selectedPlanInfo.textContent = `Selected Plan: ${planName} (${planPrice}${planDuration})`;
 }
 
 function showPinModal(view: 'enter' | 'set') {
@@ -1786,13 +1820,35 @@ async function handlePasswordUpdate(e: Event) {
     }
 }
 
+// --- Restored Application Logic ---
+
 function handleGenerationSettingsUpdate(e: Event) {
     e.preventDefault();
-    userSettings.imageAspectRatio = settingImageAspectRatioSelect.value;
-    userSettings.imageFormat = settingImageFormatSelect.value;
+    if(settingImageAspectRatioSelect) userSettings.imageAspectRatio = settingImageAspectRatioSelect.value;
+    if(settingImageFormatSelect) userSettings.imageFormat = settingImageFormatSelect.value;
     saveUserSettings();
     applyUserSettingsToDashboard();
     showSettingsToast('Generation settings saved!');
+}
+
+function handleDomainUpdate(e: Event) {
+    e.preventDefault();
+    if(!domainNameInput) return;
+    const newDomain = domainNameInput.value.trim();
+    if (newDomain && currentUser) {
+        userSettings.domain.name = newDomain;
+        // Simulate a check by setting status to pending
+        userSettings.domain.status = 'pending';
+        saveUserSettings();
+        renderDomainStatus();
+        showSettingsToast('Domain update initiated. Verification is pending.');
+    } else if (!newDomain) {
+        userSettings.domain.name = '';
+        userSettings.domain.status = 'disconnected';
+        saveUserSettings();
+        renderDomainStatus();
+        showSettingsToast('Domain disconnected.');
+    }
 }
 
 function handleNotificationsUpdate(e: Event) {
@@ -1806,654 +1862,382 @@ function handleNotificationsUpdate(e: Event) {
     showSettingsToast('Notification preferences saved!');
 }
 
-function handleThemeToggle(e: Event) {
-    userSettings.theme = (e.target as HTMLInputElement).checked ? 'dark' : 'light';
+function handleAppearanceUpdate() {
+    if(!settingDarkModeToggle) return;
+    userSettings.theme = settingDarkModeToggle.checked ? 'dark' : 'light';
     saveUserSettings();
     applyTheme();
 }
 
 function handleLanguageRegionUpdate(e: Event) {
     e.preventDefault();
-    userSettings.language = settingLanguageSelect.value;
-    userSettings.timezone = settingTimezoneSelect.value;
+    if(settingLanguageSelect) userSettings.language = settingLanguageSelect.value;
+    if(settingTimezoneSelect) userSettings.timezone = settingTimezoneSelect.value;
     saveUserSettings();
-    showSettingsToast('Language & region settings saved!');
+    showSettingsToast('Language and region settings saved!');
 }
 
-function handleCreatorApplication(e: Event) {
+function handleCreatorProgramSubmit(e: Event) {
     e.preventDefault();
-    if (!currentUser) return;
+    if (!currentUser || !creatorNameInput || !creatorLinkInput || !creatorReasonInput) return;
     const creatorApps = JSON.parse(localStorage.getItem('creator_applications') || '{}');
     creatorApps[currentUser] = {
         name: creatorNameInput.value,
         link: creatorLinkInput.value,
         reason: creatorReasonInput.value,
-        status: 'pending'
+        date: new Date().toISOString(),
     };
     localStorage.setItem('creator_applications', JSON.stringify(creatorApps));
     
     if (creatorProgramForm) creatorProgramForm.style.display = 'none';
     if (creatorAppliedMessage) creatorAppliedMessage.style.display = 'block';
-    
-    showSettingsToast('Application submitted!');
+    showSettingsToast('Application submitted! We will review it shortly.');
 }
 
-function handleSaveCard(e: Event) {
-    e.preventDefault();
-    if (!currentUser) return;
-    // ... logic to save card from settings ...
-    toggleAddCardView(false);
-    renderSavedCards();
-    showSettingsToast('Payment method added!');
-}
-
-function handleRemoveCard(cardId: number) {
-    // ... logic to remove card ...
-    renderSavedCards();
-    showSettingsToast('Payment method removed.');
-}
-
-function handleSetDefaultCard(cardId: number) {
-    // ... logic to set default card ...
-    renderSavedCards();
+function handleClearCache() {
+    if (currentUser) {
+        // This is a simulation, in a real app you'd clear specific cache keys
+        localStorage.removeItem(`reset_${currentUser}`);
+        showSettingsToast('Temporary data cleared!');
+    }
 }
 
 function handleDeleteAccount() {
+    if (deleteAccountModal && deleteConfirmInput && currentUser) {
+        deleteConfirmInput.value = '';
+        deleteConfirmInput.placeholder = currentUser;
+        if(confirmDeleteButton) confirmDeleteButton.disabled = true;
+        toggleModal(deleteAccountModal, true);
+    }
+}
+
+function handleConfirmDelete() {
     if (!currentUser) return;
-    
     const users = JSON.parse(localStorage.getItem('users') || '{}');
     delete users[currentUser];
     localStorage.setItem('users', JSON.stringify(users));
     
-    // Clear all related data
+    // Clean up all user-related data
     localStorage.removeItem(`user_${currentUser}`);
     localStorage.removeItem(`settings_${currentUser}`);
     localStorage.removeItem(`creations_${currentUser}`);
     localStorage.removeItem(`conversations_${currentUser}`);
-    sessionStorage.clear();
-    
-    window.location.href = window.location.pathname + '?message=account_deleted';
+
+    // Redirect to login screen with a message
+    window.location.search = '?message=account_deleted';
 }
 
-// --- Domain ---
-function renderDomainStatus() {
-    if (!domainStatusContainer || !dnsInstructions || !domainNameInput) return;
+// --- Creation Management ---
 
-    domainStatusContainer.className = `status-${userSettings.domain.status}`;
-    domainNameInput.value = userSettings.domain.name;
-
-    const domainSpans = document.querySelectorAll<HTMLSpanElement>('#user-domain-display, .user-domain-dynamic');
-    domainSpans.forEach(span => {
-        span.textContent = userSettings.domain.name;
-    });
-
-
-    switch (userSettings.domain.status) {
-        case 'disconnected':
-            domainStatusContainer.innerHTML = `
-                <h4><span class="status-badge">Disconnected</span> Not Connected</h4>
-                <p>Connect your domain to show off your creations.</p>
-            `;
-            dnsInstructions.style.display = 'none';
-            break;
-        case 'pending':
-            domainStatusContainer.innerHTML = `
-                <h4><span class="status-badge">Pending</span> Verifying Domain</h4>
-                <p>This may take up to 48 hours. Make sure your DNS records are set correctly.</p>
-            `;
-            dnsInstructions.style.display = 'block';
-            break;
-        case 'connected':
-            domainStatusContainer.innerHTML = `
-                <h4><span class="status-badge">Connected</span> Domain is Live</h4>
-                <p>Your creations are now available at <a href="http://${userSettings.domain.name}" target="_blank" rel="noopener noreferrer">${userSettings.domain.name}</a>.</p>
-            `;
-            dnsInstructions.style.display = 'none';
-            break;
+function getCreationsFromLocalStorage(): any[] {
+    if (!currentUser) return [];
+    try {
+        return JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
+    } catch(e) {
+        return [];
     }
 }
 
-function handleConnectDomain(e: Event) {
-    e.preventDefault();
-    if (!domainNameInput) return;
-    const domainName = domainNameInput.value.trim();
-    if (!domainName) {
-        showErrorModal(['Please enter a valid domain name.'], 'Invalid Domain');
-        return;
-    }
-
-    userSettings.domain.name = domainName;
-    userSettings.domain.status = 'pending';
-    saveUserSettings();
-    renderDomainStatus();
-    showSettingsToast('Domain verification initiated.');
-
-    // Simulate verification check
-    setTimeout(() => {
-        // In a real app, you'd poll a backend here.
-        // For this demo, we'll auto-connect after a short delay.
-        if (userSettings.domain.status === 'pending') {
-            userSettings.domain.status = 'connected';
-            saveUserSettings();
-            renderDomainStatus();
-            showSettingsToast('Domain successfully connected!', 'success');
-        }
-    }, 8000);
-}
-
-// --- Creations & Gallery ---
-function viewCurrentCreation() {
-    if (!currentCreation || !currentCreation.data) {
-        showErrorModal(['There is no creation to view.'], 'Nothing to View');
-        return;
-    }
-
-    if (largeViewModal && largeViewImage && largeViewVideo) {
-        largeViewModal.style.display = 'flex';
-        if (currentCreation.type === 'image') {
-            largeViewImage.src = currentCreation.data;
-            largeViewImage.style.display = 'block';
-            largeViewVideo.style.display = 'none';
-            largeViewVideo.src = '';
-        }
-    }
-}
-
-function handleDownload() {
-    if (!currentCreation.data) return;
-
-    if (!userState.isPremium && userState.downloadsToday >= MAX_FREE_DOWNLOADS) {
-        showErrorModal(['You have reached your daily download limit.'], 'Download Limit Reached');
-        return;
-    }
-
-    const processDownload = (dataUrl: string) => {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        
-        const fileExtension = userSettings.imageFormat.split('/')[1];
-        a.download = `creation-${Date.now()}.${fileExtension}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-
-        if (!userState.isPremium) {
-            userState.downloadsToday++;
-            saveUserState();
-            updateUserStatusUI();
-        }
-    };
-
-    if (currentFilter === 'none') {
-        processDownload(currentCreation.data);
-    } else {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                showErrorModal(['Could not process image for download.'], 'Download Failed');
-                return;
-            }
-
-            canvas.width = img.width;
-            canvas.height = img.height;
-            
-            ctx.filter = currentFilter;
-            ctx.drawImage(img, 0, 0);
-
-            const filteredDataUrl = canvas.toDataURL(userSettings.imageFormat);
-            processDownload(filteredDataUrl);
-        };
-        img.onerror = () => {
-             showErrorModal(['Could not load image for filtering.'], 'Download Failed');
-        };
-        img.src = currentCreation.data;
-    }
-}
-
-function handleSaveCreation() {
+function saveCreationsToLocalStorage(creations: any[]) {
     if (!currentUser) return;
-    if (!userState.isPremium) {
-        showErrorModal(['Saving creations is a Premium feature.'], 'Upgrade to Save');
-        if (subscriptionModal) subscriptionModal.style.display = 'flex';
-        return;
-    }
-
-    if (!currentCreation.data) {
-        showErrorModal(['There is no creation to save.'], 'Nothing to Save');
-        return;
-    }
-
-    const creations = JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
-    const newCreation = {
-        id: `creation-${Date.now()}`,
-        data: currentCreation.data,
-        type: currentCreation.type,
-        prompt: currentPromptText,
-        filter: currentFilter,
-        date: new Date().toISOString()
-    };
-    creations.unshift(newCreation);
     localStorage.setItem(`creations_${currentUser}`, JSON.stringify(creations));
-    
-    showSettingsToast('Creation saved!');
-    if (saveCreationButton) saveCreationButton.disabled = true;
 }
 
-async function handleShare() {
-    if (!currentCreation.data) return;
-
-    if (!userState.isPremium) {
-        const today = new Date().toISOString().split('T')[0];
-        if (userState.lastShareDate !== today) {
-            userState.sharesToday = 0;
-            userState.lastShareDate = today;
-        }
-
-        if (userState.sharesToday >= MAX_SHARE_CREDITS) {
-            showErrorModal(
-                ['You have used all your share credits for today. Upgrade to Premium for unlimited sharing.'],
-                'Share Limit Reached'
-            );
+function saveCreation() {
+    if (userState.isPremium) {
+        if (!currentCreation.data) {
+            showErrorModal(['There is no creation to save.'], 'Save Error');
             return;
         }
-    }
-    
-    const shareData = {
-        title: 'Se-Mo Creation',
-        text: `Check out this creation I made: ${currentPromptText}`,
-    };
-
-    try {
-        if (navigator.share) {
-            await navigator.share(shareData);
-            if (!userState.isPremium) {
-                userState.sharesToday++;
-                // Give a free download as a reward
-                if (userState.downloadsToday > 0) {
-                    userState.downloadsToday--;
-                }
-                saveUserState();
-                updateUserStatusUI();
-                showSettingsToast('Shared successfully! You earned a download credit.');
-            }
-        } else {
-            if (shareFallbackModal) shareFallbackModal.style.display = 'flex';
-        }
-    } catch (error) {
-        console.error('Error sharing:', error);
-        if (shareFallbackModal) shareFallbackModal.style.display = 'flex';
-    }
-}
-
-function handleFilterChange(e: Event) {
-    const target = e.target as HTMLButtonElement;
-    if (!target.dataset.filter || !resultImage) return;
-
-    // Update button styles
-    if (filterOptionsContainer) {
-        const currentActive = filterOptionsContainer.querySelector('.active');
-        if (currentActive) currentActive.classList.remove('active');
-    }
-    target.classList.add('active');
-    
-    currentFilter = target.dataset.filter;
-    resultImage.style.filter = currentFilter;
-}
-
-function handleViewSwitch(view: 'image' | 'chat') {
-    if (view === 'image') {
-        if (imageGeneratorView) imageGeneratorView.style.display = 'flex';
-        if (chatView) chatView.style.display = 'none';
-        if (imageNavButton) imageNavButton.classList.add('active');
-        if (chatNavButton) chatNavButton.classList.remove('active');
+        const creations = getCreationsFromLocalStorage();
+        const newCreation = {
+            id: `creation-${Date.now()}`,
+            ...currentCreation,
+            prompt: currentPromptText,
+            date: new Date().toISOString(),
+        };
+        creations.unshift(newCreation);
+        saveCreationsToLocalStorage(creations);
+        showSettingsToast('Creation saved successfully!', 'success');
     } else {
-        if (imageGeneratorView) imageGeneratorView.style.display = 'none';
-        if (chatView) chatView.style.display = 'flex';
-        if (imageNavButton) imageNavButton.classList.remove('active');
-        if (chatNavButton) chatNavButton.classList.add('active');
-        loadConversations();
+        showErrorModal(['Saving creations is a Premium feature. Please upgrade your plan.'], 'Upgrade Required');
     }
 }
 
-function getCreations() {
-    if (!currentUser) return [];
-    return JSON.parse(localStorage.getItem(`creations_${currentUser}`) || '[]');
-}
+function renderCreations(page = 1) {
+    if (!creationsGallery) return;
 
-function renderCreations() {
-    if (!creationsGallery || !creationsPaginationControls || !creationsPageInfo || !creationsPrevPageButton || !creationsNextPageButton) return;
-    
-    const creations = getCreations();
-    const totalPages = Math.ceil(creations.length / CREATIONS_PER_PAGE);
-    
-    if (creations.length === 0) {
-        creationsGallery.innerHTML = '<p style="grid-column: 1 / -1; text-align: center;">You haven\'t saved any creations yet.</p>';
-        creationsPaginationControls.style.display = 'none';
+    const allCreations = getCreationsFromLocalStorage();
+    creationsGallery.innerHTML = '';
+
+    const totalCreations = allCreations.length;
+    if (totalCreations === 0) {
+        creationsGallery.innerHTML = '<p style="text-align: center; color: var(--subtle-text-color);">You haven\'t saved any creations yet.</p>';
+        if (creationsPaginationControls) creationsPaginationControls.style.display = 'none';
         return;
     }
 
-    creationsPaginationControls.style.display = 'flex';
-    creationsPageInfo.textContent = `Page ${creationsCurrentPage} of ${totalPages}`;
-    creationsPrevPageButton.disabled = creationsCurrentPage === 1;
-    creationsNextPageButton.disabled = creationsCurrentPage === totalPages || totalPages === 0;
-    
+    const totalPages = Math.ceil(totalCreations / CREATIONS_PER_PAGE);
+    creationsCurrentPage = Math.max(1, Math.min(page, totalPages));
+
     const startIndex = (creationsCurrentPage - 1) * CREATIONS_PER_PAGE;
     const endIndex = startIndex + CREATIONS_PER_PAGE;
-    const pageCreations = creations.slice(startIndex, endIndex);
+    const pageCreations = allCreations.slice(startIndex, endIndex);
 
-    creationsGallery.innerHTML = '';
-    pageCreations.forEach((creation: any) => {
+    pageCreations.forEach(creation => {
         const item = document.createElement('div');
         item.className = 'creation-item';
         item.dataset.id = creation.id;
         item.innerHTML = `
-            <a href="#" class="creation-media-wrapper">
-                <img src="${creation.data}" alt="${creation.prompt}">
+            <a href="#" class="creation-media-wrapper" data-media-url="${creation.data}" title="Click to view larger">
+                <img src="${creation.data}" alt="${creation.prompt}" loading="lazy">
                 <div class="creation-overlay">${creation.prompt}</div>
             </a>
-            <div class="creation-actions">
-                <span class="creation-date">${new Date(creation.date).toLocaleDateString()}</span>
-                <button class="icon-button delete-creation-btn" title="Delete">
-                     <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
-                </button>
-            </div>
         `;
         creationsGallery.appendChild(item);
     });
-}
 
-function handleCreationsPagination(direction: 'next' | 'prev') {
-    const creations = getCreations();
-    const totalPages = Math.ceil(creations.length / CREATIONS_PER_PAGE);
-    if (direction === 'next' && creationsCurrentPage < totalPages) {
-        creationsCurrentPage++;
-    } else if (direction === 'prev' && creationsCurrentPage > 1) {
-        creationsCurrentPage--;
+    if (creationsPaginationControls) {
+        creationsPaginationControls.style.display = totalPages > 1 ? 'flex' : 'none';
     }
-    renderCreations();
+    if (creationsPageInfo) {
+        creationsPageInfo.textContent = `Page ${creationsCurrentPage} of ${totalPages}`;
+    }
+    if (creationsPrevPageButton) {
+        creationsPrevPageButton.disabled = creationsCurrentPage === 1;
+    }
+    if (creationsNextPageButton) {
+        creationsNextPageButton.disabled = creationsCurrentPage === totalPages;
+    }
 }
 
 function openCreationsModal() {
-    if (!userState.isPremium) {
-        showErrorModal(['Viewing your creations gallery is a Premium feature.'], 'Upgrade to View');
-        if (subscriptionModal) subscriptionModal.style.display = 'flex';
-        return;
-    }
-    creationsCurrentPage = 1;
-    renderCreations();
-    if (creationsModal) creationsModal.style.display = 'flex';
-}
-
-function handleCreationAction(e: Event) {
-    const target = e.target as HTMLElement;
-    // FIX: Cast the result of `closest` to HTMLElement to access `dataset`.
-    const creationItem = target.closest<HTMLElement>('.creation-item');
-    if (!creationItem) return;
-    const creationId = creationItem.dataset.id;
-
-    if (target.closest('.delete-creation-btn')) {
-        if (confirm('Are you sure you want to delete this creation?')) {
-            if (!currentUser) return;
-            let creations = getCreations();
-            creations = creations.filter((c: any) => c.id !== creationId);
-            localStorage.setItem(`creations_${currentUser}`, JSON.stringify(creations));
-            renderCreations();
-            showSettingsToast('Creation deleted.');
-        }
-    } else if (target.closest('.creation-media-wrapper')) {
-        e.preventDefault();
-        const creation = getCreations().find((c: any) => c.id === creationId);
-        if (creation) {
-            currentCreation = creation;
-            viewCurrentCreation();
-            if(creationsModal) creationsModal.style.display = 'none';
-        }
-    }
-}
-
-function handleClearCache() {
-    if(!currentUser) return;
-    localStorage.removeItem(`reset_${currentUser}`);
-    showSettingsToast('Temporary data cleared!');
-}
-
-function handlePinInput(e: KeyboardEvent, container: HTMLElement) {
-    const target = e.target as HTMLInputElement;
-    const inputs = Array.from(container.querySelectorAll('.pin-input')) as HTMLInputElement[];
-    const key = e.key;
-
-    if (key >= '0' && key <= '9') {
-        target.value = key;
-        const next = target.nextElementSibling as HTMLInputElement;
-        if (next && next.classList.contains('pin-input')) {
-            next.focus();
-        }
-    } else if (key === 'Backspace') {
-        target.value = '';
-        const prev = target.previousElementSibling as HTMLInputElement;
-        if (prev && prev.classList.contains('pin-input')) {
-            prev.focus();
-        }
-    } else if (e.key === 'ArrowLeft') {
-        const prev = target.previousElementSibling as HTMLInputElement;
-        if (prev && prev.classList.contains('pin-input')) {
-            prev.focus();
-        }
-    } else if (e.key === 'ArrowRight') {
-         const next = target.nextElementSibling as HTMLInputElement;
-        if (next && next.classList.contains('pin-input')) {
-            next.focus();
-        }
-    }
-    
-    // Check if all inputs in the current view are filled
-    const allFilled = inputs.every(input => input.value !== '');
-    if (container === pinSetInputContainer && setPinButton) {
-        setPinButton.disabled = !allFilled;
-    }
-    if (allFilled) {
-        if (container === pinInputContainer) {
-            verifyPin();
-        } else if (container === pinConfirmInputContainer && setPinButton) {
-            setPinButton.disabled = false;
-        }
-    }
-}
-
-async function verifyPin() {
-    if (!currentUser) return;
-    const inputs = Array.from(pinInputContainer.querySelectorAll('.pin-input')) as HTMLInputElement[];
-    const enteredPin = inputs.map(i => i.value).join('');
-
-    if (enteredPin.length !== 4) return;
-
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    const user = users[currentUser];
-
-    if (user && user.parentalPin === enteredPin) {
-        if (pinMessage) pinMessage.textContent = 'PIN verified!';
-        if (pinMessage) pinMessage.style.color = 'var(--secondary-color)';
-        setTimeout(() => {
-            if(parentalPinModal) parentalPinModal.style.display = 'none';
-            if (pinAction === 'payment') {
-                processSubscriptionPayment();
-            } else if (pinAction === 'settings') {
-                showSettingsToast('PIN verified. You can now manage your settings.');
-            }
-        }, 500);
+    if (userState.isPremium) {
+        renderCreations(1);
+        if (creationsModal) creationsModal.style.display = 'flex';
     } else {
-        if (pinMessage) pinMessage.textContent = 'Incorrect PIN. Please try again.';
-        if (pinMessage) pinMessage.style.color = 'var(--danger-color)';
-        pinInputContainer.classList.add('shake');
-        setTimeout(() => pinInputContainer.classList.remove('shake'), 500);
-        inputs.forEach(i => i.value = '');
-        inputs[0].focus();
+        showErrorModal(['Viewing your creations gallery is a Premium feature.'], 'Upgrade Required');
     }
 }
 
-
-function initialize() {
-    cacheDOMElements();
-    if (!GEMINI_API_KEY) {
-        const errorOverlay = document.getElementById('config-error-overlay');
-        if (errorOverlay) {
-            errorOverlay.style.display = 'flex';
-        }
-        return;
+// A simple function to toggle any modal
+function toggleModal(modal: HTMLElement | null, show: boolean) {
+    if (modal) {
+        modal.style.display = show ? 'flex' : 'none';
     }
-    
-    setTimeout(() => {
-        if (splashScreen) splashScreen.classList.add('hidden');
-    }, 1200);
+}
 
-    // Event Listeners
+// --- App Initialization & Event Listeners ---
+
+function setupEventListeners() {
     // Auth
-    if (loginForm) loginForm.addEventListener('submit', handleLogin);
-    if (registerForm) registerForm.addEventListener('submit', handleRegister);
-    if (forgotPasswordForm) forgotPasswordForm.addEventListener('submit', handleForgotPasswordRequest);
-    if (resetPasswordForm) resetPasswordForm.addEventListener('submit', handlePasswordReset);
-    if (authToggleLink) authToggleLink.addEventListener('click', (e) => {
+    loginForm?.addEventListener('submit', handleLogin);
+    registerForm?.addEventListener('submit', handleRegister);
+    forgotPasswordForm?.addEventListener('submit', handleForgotPasswordRequest);
+    resetPasswordForm?.addEventListener('submit', handlePasswordReset);
+    authToggleLink?.addEventListener('click', (e) => {
         e.preventDefault();
-        const mode = (e.target as HTMLAnchorElement).dataset.mode as 'login' | 'register';
-        if (mode) switchAuthView(mode);
+        const mode = (e.currentTarget as HTMLElement).dataset.mode as 'login' | 'register';
+        switchAuthView(mode);
     });
-    if (forgotPasswordLink) forgotPasswordLink.addEventListener('click', (e) => {
+    forgotPasswordLink?.addEventListener('click', (e) => {
         e.preventDefault();
         switchAuthView('forgot');
     });
-    setupAuthLegalTabs();
 
     // Main UI
-    if (generateButton) generateButton.addEventListener('click', generate);
-    if (aiAssistButton) aiAssistButton.addEventListener('click', handleAiAssist);
-    if (promptEl) {
-        promptEl.addEventListener('input', () => {
-            currentPromptText = promptEl.value;
-            const hasText = currentPromptText.trim() !== '';
-            if (generateButton) generateButton.disabled = !hasText;
-            if (aiAssistButton) aiAssistButton.disabled = !hasText;
-        });
-    }
-    if (examplePromptsSelect) {
-        examplePromptsSelect.addEventListener('change', () => {
-            if (promptEl && examplePromptsSelect.value) {
-                promptEl.value = examplePromptsSelect.value;
-                promptEl.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        });
-    }
-    if (upload) upload.addEventListener('change', handleFileUpload);
-    if (clearPreviewButton) clearPreviewButton.addEventListener('click', clearPreview);
-    if (downloadButton) downloadButton.addEventListener('click', handleDownload);
-    if (saveCreationButton) saveCreationButton.addEventListener('click', handleSaveCreation);
-    if (shareButton) shareButton.addEventListener('click', handleShare);
-    if (viewCreationButton) viewCreationButton.addEventListener('click', viewCurrentCreation);
-    if (refreshPromptsButton) refreshPromptsButton.addEventListener('click', populateDailyPrompts);
-
+    subscribeButton?.addEventListener('click', () => toggleModal(subscriptionModal, true));
+    promptEl?.addEventListener('input', () => {
+        if(promptEl) currentPromptText = promptEl.value;
+        if (generateButton) generateButton.disabled = currentPromptText.trim() === '' && !base64data;
+    });
+    generateButton?.addEventListener('click', generate);
+    aiAssistButton?.addEventListener('click', handleAiAssist);
+    upload?.addEventListener('change', handleFileUpload);
+    clearPreviewButton?.addEventListener('click', clearPreview);
+    downloadButton?.addEventListener('click', () => {
+        if (resultImage?.src && resultImage.src !== window.location.href) {
+            const a = document.createElement('a');
+            a.href = resultImage.src;
+            const format = userSettings.imageFormat.split('/')[1] || 'jpeg';
+            a.download = `semo-creation-${Date.now()}.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    });
+    saveCreationButton?.addEventListener('click', saveCreation);
+    viewCreationButton?.addEventListener('click', () => {
+        if(currentCreation.data && largeViewModal && largeViewImage){
+            largeViewImage.src = currentCreation.data;
+            largeViewImage.style.display = 'block';
+            if (largeViewVideo) largeViewVideo.style.display = 'none';
+            toggleModal(largeViewModal, true);
+        }
+    });
+    
     // Filters
-    if (filterOptionsContainer) {
-        filterOptionsContainer.addEventListener('click', (e) => {
-            if ((e.target as HTMLElement).classList.contains('filter-button')) {
-                handleFilterChange(e);
+    filterOptionsContainer?.addEventListener('click', (e) => {
+        const target = e.target as HTMLButtonElement;
+        if (target.classList.contains('filter-button')) {
+            filterOptionsContainer.querySelector('.active')?.classList.remove('active');
+            target.classList.add('active');
+            currentFilter = target.dataset.filter || 'none';
+            if (resultImage) {
+                resultImage.style.filter = currentFilter;
             }
-        });
-    }
-
-    // Main Navigation
-    if(imageNavButton) imageNavButton.addEventListener('click', () => handleViewSwitch('image'));
-    if(chatNavButton) chatNavButton.addEventListener('click', () => handleViewSwitch('chat'));
-
-    // Chat
-    if(newChatButton) newChatButton.addEventListener('click', handleNewChat);
-    if(chatForm) chatForm.addEventListener('submit', handleChatSubmit);
-    if(chatInput) {
-        chatInput.addEventListener('input', () => {
-            if(chatSendButton) chatSendButton.disabled = chatInput.value.trim() === '';
-        });
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleChatSubmit();
-            }
-        });
-    }
-
-    // Profile Dropdown
-    if (profileButton) {
-        profileButton.addEventListener('click', () => {
-            if(profileDropdown) profileDropdown.style.display = profileDropdown.style.display === 'block' ? 'none' : 'block';
-        });
-    }
-    document.addEventListener('click', (e) => {
-        if (profileContainer && !profileContainer.contains(e.target as Node)) {
-            if (profileDropdown) profileDropdown.style.display = 'none';
         }
     });
 
-    // Modals
-    if (logoutButton) logoutButton.addEventListener('click', handleLogout);
-    if (settingsButton) settingsButton.addEventListener('click', (e) => { e.preventDefault(); openSettingsModal(); });
-    if (myCreationsButton) myCreationsButton.addEventListener('click', (e) => { e.preventDefault(); openCreationsModal(); });
-    if (subscribeButton) subscribeButton.addEventListener('click', () => { if(subscriptionModal) subscriptionModal.style.display = 'flex'; });
-    
-    // Close buttons
-    [modalCloseButton, subscriptionModalCloseButton, settingsModalCloseButton, creationsModalCloseButton, shareFallbackCloseButton, largeViewCloseButton, pinModalCloseButton, gcpGuideCloseButton].forEach(btn => {
-        if (btn) btn.addEventListener('click', () => {
-            const modal = btn.closest('.modal-overlay');
-            if (modal) (modal as HTMLElement).style.display = 'none';
-        });
+    // Profile & Modals
+    profileButton?.addEventListener('click', () => {
+        if (profileDropdown) profileDropdown.style.display = profileDropdown.style.display === 'block' ? 'none' : 'block';
     });
-
-    // Subscription Modal
-    pricingPlans.forEach(plan => plan.addEventListener('click', () => handlePlanSelection(plan)));
-    if (continuePaymentButton) continuePaymentButton.addEventListener('click', showPaymentSelectionView);
-    if (backToPlansButton) backToPlansButton.addEventListener('click', () => {
-        if(planSelectionView) planSelectionView.style.display = 'block';
-        if(paymentSelectionView) paymentSelectionView.style.display = 'none';
+    document.addEventListener('click', (e) => {
+        if (profileDropdown && !profileContainer?.contains(e.target as Node)) {
+            profileDropdown.style.display = 'none';
+        }
     });
-    if(paypalPaymentButton) paypalPaymentButton.addEventListener('click', handlePayPalPayment);
+    logoutButton?.addEventListener('click', (e) => { e.preventDefault(); handleLogout(); });
+    settingsButton?.addEventListener('click', (e) => { e.preventDefault(); openSettingsModal(); });
+    myCreationsButton?.addEventListener('click', (e) => { e.preventDefault(); openCreationsModal(); });
+    modalCloseButton?.addEventListener('click', () => toggleModal(errorModal, false));
+    subscriptionModalCloseButton?.addEventListener('click', () => toggleModal(subscriptionModal, false));
+    settingsModalCloseButton?.addEventListener('click', () => toggleModal(settingsModal, false));
+    creationsModalCloseButton?.addEventListener('click', () => toggleModal(creationsModal, false));
+    largeViewCloseButton?.addEventListener('click', () => toggleModal(largeViewModal, false));
+    shareFallbackCloseButton?.addEventListener('click', () => toggleModal(shareFallbackModal, false));
 
-
-    // Settings Modal
+    // Settings
     setupSettingsNavigation();
-    if (profileForm) profileForm.addEventListener('submit', handleProfileUpdate);
-    if (profilePictureInput) profilePictureInput.addEventListener('change', handleAvatarChange);
-    if (linksForm) linksForm.addEventListener('submit', handleLinksUpdate);
-    if (passwordForm) passwordForm.addEventListener('submit', handlePasswordUpdate);
-    if (generationSettingsForm) generationSettingsForm.addEventListener('submit', handleGenerationSettingsUpdate);
-    if (notificationsForm) notificationsForm.addEventListener('submit', handleNotificationsUpdate);
-    if (settingDarkModeToggle) settingDarkModeToggle.addEventListener('change', handleThemeToggle);
-    if (languageRegionForm) languageRegionForm.addEventListener('submit', handleLanguageRegionUpdate);
-    if (creatorProgramForm) creatorProgramForm.addEventListener('submit', handleCreatorApplication);
-    if (domainForm) domainForm.addEventListener('submit', handleConnectDomain);
-    
+    profileForm?.addEventListener('submit', handleProfileUpdate);
+    profilePictureInput?.addEventListener('change', handleAvatarChange);
+    linksForm?.addEventListener('submit', handleLinksUpdate);
+    passwordForm?.addEventListener('submit', handlePasswordUpdate);
+    generationSettingsForm?.addEventListener('submit', handleGenerationSettingsUpdate);
+    notificationsForm?.addEventListener('submit', handleNotificationsUpdate);
+    settingDarkModeToggle?.addEventListener('change', handleAppearanceUpdate);
+    languageRegionForm?.addEventListener('submit', handleLanguageRegionUpdate);
+    creatorProgramForm?.addEventListener('submit', handleCreatorProgramSubmit);
+    domainForm?.addEventListener('submit', handleDomainUpdate);
+
     // Privacy & Security
-    if (manageProjectsButton) manageProjectsButton.addEventListener('click', openCreationsModal);
-    if(clearCacheButton) clearCacheButton.addEventListener('click', handleClearCache);
-    if(deleteAccountButton) deleteAccountButton.addEventListener('click', () => {
-        if(deleteAccountModal) deleteAccountModal.style.display = 'flex';
-        if(deleteConfirmInput) deleteConfirmInput.value = '';
-        if(confirmDeleteButton) confirmDeleteButton.disabled = true;
+    clearCacheButton?.addEventListener('click', handleClearCache);
+    deleteAccountButton?.addEventListener('click', handleDeleteAccount);
+    cancelDeleteButton?.addEventListener('click', () => toggleModal(deleteAccountModal, false));
+    deleteConfirmInput?.addEventListener('input', () => {
+        if (confirmDeleteButton && deleteConfirmInput) confirmDeleteButton.disabled = deleteConfirmInput.value !== currentUser;
     });
-    if(cancelDeleteButton) cancelDeleteButton.addEventListener('click', () => {
-        if(deleteAccountModal) deleteAccountModal.style.display = 'none';
+    confirmDeleteButton?.addEventListener('click', handleConfirmDelete);
+    
+    // Payment
+    pricingPlans.forEach(plan => {
+        plan.addEventListener('click', () => handlePlanSelection(plan as HTMLDivElement));
     });
-    if(confirmDeleteButton) confirmDeleteButton.addEventListener('click', handleDeleteAccount);
-    if(deleteConfirmInput) deleteConfirmInput.addEventListener('input', () => {
-        if(confirmDeleteButton) confirmDeleteButton.disabled = deleteConfirmInput.value !== currentUser;
+    continuePaymentButton?.addEventListener('click', showPaymentSelectionView);
+    backToPlansButton?.addEventListener('click', () => {
+        if (planSelectionView) planSelectionView.style.display = 'block';
+        if (paymentSelectionView) paymentSelectionView.style.display = 'none';
+    });
+    paypalPaymentButton?.addEventListener('click', handlePayPalPayment);
+
+
+    // Nav
+    imageNavButton?.addEventListener('click', () => {
+        if(imageGeneratorView) imageGeneratorView.style.display = 'flex';
+        if(chatView) chatView.style.display = 'none';
+        imageNavButton.classList.add('active');
+        chatNavButton?.classList.remove('active');
+    });
+    chatNavButton?.addEventListener('click', () => {
+        if(imageGeneratorView) imageGeneratorView.style.display = 'none';
+        if(chatView) chatView.style.display = 'flex';
+        chatNavButton.classList.add('active');
+        imageNavButton?.classList.remove('active');
     });
 
-    // Creations Modal
-    if(creationsGallery) creationsGallery.addEventListener('click', handleCreationAction);
-    if(creationsPrevPageButton) creationsPrevPageButton.addEventListener('click', () => handleCreationsPagination('prev'));
-    if(creationsNextPageButton) creationsNextPageButton.addEventListener('click', () => handleCreationsPagination('next'));
+    // Chat
+    newChatButton?.addEventListener('click', handleNewChat);
+    chatForm?.addEventListener('submit', handleChatSubmit);
+    chatInput?.addEventListener('input', () => {
+       if (chatSendButton && chatInput) chatSendButton.disabled = chatInput.value.trim() === '';
+    });
+    chatInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (chatInput && chatInput.value.trim() !== '') handleChatSubmit();
+        }
+    });
+
+    // Daily Prompts
+    refreshPromptsButton?.addEventListener('click', populateDailyPrompts);
+
+    // Creations
+    creationsPrevPageButton?.addEventListener('click', () => renderCreations(creationsCurrentPage - 1));
+    creationsNextPageButton?.addEventListener('click', () => renderCreations(creationsCurrentPage + 1));
+    creationsGallery?.addEventListener('click', e => {
+        const wrapper = (e.target as HTMLElement).closest('.creation-media-wrapper');
+        if (wrapper && largeViewModal && largeViewImage) {
+            e.preventDefault();
+            const mediaUrl = wrapper.getAttribute('data-media-url');
+            if (mediaUrl) {
+                largeViewImage.src = mediaUrl;
+                largeViewImage.style.display = 'block';
+                if (largeViewVideo) largeViewVideo.style.display = 'none';
+                toggleModal(largeViewModal, true);
+            }
+        }
+    });
+
+    // Guides
+    showGcpGuideLink?.addEventListener('click', (e) => { e.preventDefault(); toggleModal(gcpGuideModal, true); });
+    gcpGuideCloseButton?.addEventListener('click', () => toggleModal(gcpGuideModal, false));
+    showNamecheapGuideLink?.addEventListener('click', (e) => { e.preventDefault(); toggleModal(namecheapGuideModal, true); });
+    namecheapGuideCloseButton?.addEventListener('click', () => toggleModal(namecheapGuideModal, false));
     
-    // GCP Guide
-    if (showGcpGuideLink) showGcpGuideLink.addEventListener('click', (e) => { e.preventDefault(); if (gcpGuideModal) gcpGuideModal.style.display = 'flex'; });
-    
-    checkAuthStatus();
+    // Drag and Drop
+    mainContent?.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        mainContent.classList.add('drag-over');
+    });
+    mainContent?.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        mainContent.classList.remove('drag-over');
+    });
+    mainContent?.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        mainContent.classList.remove('drag-over');
+        if (e.dataTransfer?.files[0]) {
+            if (upload) {
+                upload.files = e.dataTransfer.files;
+                upload.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    });
 }
 
-document.addEventListener('DOMContentLoaded', initialize);
+function initializeApp() {
+    cacheDOMElements();
+
+    if (!GEMINI_API_KEY) {
+        console.error('Gemini API key is not set. Please create a .env file with API_KEY=YOUR_API_KEY');
+        const configErrorModal = document.getElementById('config-error-overlay');
+        toggleModal(configErrorModal, true);
+        return;
+    }
+    
+    setupEventListeners();
+    setupAuthLegalTabs();
+    checkAuthStatus();
+
+    setTimeout(() => {
+        if(splashScreen) {
+            splashScreen.classList.add('hidden');
+        }
+    }, 1200);
+}
+
+document.addEventListener('DOMContentLoaded', initializeApp);

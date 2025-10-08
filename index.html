@@ -559,7 +559,7 @@
             <div class="settings-pane" id="pane-domain">
                 <h3>Connect Your Domain</h3>
                 <p class="form-group-description">Point your custom domain to your Se-Mo creations page.
-                  <a href="#" id="show-gcp-guide" class="gcp-guide-link">I'm lost, show me a picture.</a>
+                  <a href="#" id="show-gcp-guide" class="visual-guide-link">I'm lost, show me a picture.</a>
                 </p>
                 <div id="domain-status-container">
                     <!-- Status will be rendered here -->
@@ -574,7 +574,9 @@
                     </div>
                 </form>
                 <div id="dns-instructions" style="display: none;">
-                    <h4 class="settings-subheader">Configuration Required on Namecheap</h4>
+                    <h4 class="settings-subheader">Configuration Required on Namecheap
+                        <a href="#" id="show-namecheap-guide" class="visual-guide-link">Show me how</a>
+                    </h4>
                     <p>To connect your domain, log in to your Namecheap account and add the following DNS records for <strong><span id="user-domain-display"></span></strong>. Changes can take up to 48 hours to take effect.</p>
 
                     <div class="dns-record-card">
@@ -908,6 +910,62 @@
     </div>
     <div class="modal-actions" style="justify-content: center; margin-top: 1.5rem;">
       <button id="gcp-guide-close-button" class="button button-primary">Got it, thanks!</button>
+    </div>
+  </div>
+</div>
+
+<div id="namecheap-guide-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 800px; text-align: left;">
+    <h3>Visual Guide: Configuring Namecheap DNS</h3>
+    <p>Follow these steps inside your Namecheap account to connect <strong>se-mo.online</strong>. Find these settings under "Domain List" -> "Manage" -> "Advanced DNS".</p>
+    <div class="gcp-fake-ui" style="font-family: sans-serif;">
+      <div class="gcp-step">
+        <div class="gcp-header">
+          <span>HOST RECORDS</span>
+        </div>
+        <div class="gcp-annotation" style="top: 55px; left: 10px; z-index: 11;">
+          <div class="gcp-annotation-number">1</div>
+          <div class="gcp-annotation-text">Click "ADD NEW RECORD" for each entry.</div>
+        </div>
+        <div class="gcp-annotation" style="top: 170px; right: 10px;">
+          <div class="gcp-annotation-number">2</div>
+          <div class="gcp-annotation-text">Add all A, AAAA, and CNAME records as shown in the settings.</div>
+        </div>
+        <div class="gcp-content" style="padding: 0;">
+          <div class="gcp-table-row clickable-area" style="grid-template-columns: 1fr; padding: 0.75rem 1rem;">
+            <button class="settings-utility-button" style="width: auto; justify-self: start;">ADD NEW RECORD</button>
+          </div>
+          <div class="gcp-table-header" style="grid-template-columns: 1fr 1fr 2fr 1fr;">
+            <span>Type</span>
+            <span>Host</span>
+            <span>Value</span>
+            <span>TTL</span>
+          </div>
+          <!-- Example A record -->
+          <div class="gcp-table-row clickable-area" style="grid-template-columns: 1fr 1fr 2fr 1fr;">
+            <span>A Record</span>
+            <span>@</span>
+            <span style="color: var(--text-color); font-weight: normal;">216.239.32.21</span>
+            <span>Automatic</span>
+          </div>
+          <!-- Example CNAME record -->
+           <div class="gcp-table-row" style="grid-template-columns: 1fr 1fr 2fr 1fr;">
+            <span>CNAME Record</span>
+            <span>www</span>
+            <span style="color: var(--text-color); font-weight: normal;">ghs.googlehosted.com.</span>
+            <span>Automatic</span>
+          </div>
+           <div class="gcp-table-row" style="grid-template-columns: 1fr 1fr 2fr 1fr; opacity: 0.6;">
+            <span>URL Redirect</span>
+            <span>@</span>
+            <span style="color: var(--text-color); font-weight: normal;">http://www.se-mo.online/</span>
+            <span>Unmasked</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content: center; margin-top: 1.5rem;">
+      <button id="namecheap-guide-close-button" class="button button-primary">Got it, thanks!</button>
     </div>
   </div>
 </div>
