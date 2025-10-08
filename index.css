@@ -2626,3 +2626,123 @@ input:checked + .toggle-slider:before {
         padding: 1rem;
     }
 }
+
+/* GCP Visual Guide Styles */
+.gcp-guide-link {
+  font-weight: 500;
+  color: var(--primary-color);
+  text-decoration: none;
+  font-size: 0.8rem;
+  margin-left: 0.5rem;
+}
+.gcp-guide-link:hover {
+  text-decoration: underline;
+}
+
+.gcp-fake-ui {
+  background-color: var(--subtle-background);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-family: 'Roboto', sans-serif; /* Mimic GCP font */
+  font-size: 14px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.gcp-step {
+  position: relative;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--card-background);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.gcp-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.gcp-content {
+  padding: 1rem;
+}
+
+.gcp-table-header, .gcp-table-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  align-items: center;
+}
+.gcp-table-header {
+  font-weight: 500;
+  color: var(--subtle-text-color);
+}
+.gcp-table-row:last-child {
+  border-bottom: none;
+}
+.gcp-table-row span:first-child {
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.gcp-tabs {
+  display: flex;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--subtle-text-color);
+  align-items: center;
+}
+
+.gcp-page-content {
+  padding-top: 1rem;
+  color: var(--subtle-text-color);
+}
+
+.clickable-area {
+  background-color: rgba(66, 133, 244, 0.1);
+  border: 2px solid var(--primary-color);
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(66, 133, 244, 0.5);
+  padding: 0.5rem;
+  margin: -0.5rem; /* Offset padding */
+  font-weight: 700 !important;
+  color: var(--primary-color) !important;
+  cursor: default;
+}
+
+.gcp-annotation {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: var(--card-background);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 10;
+  border: 1px solid var(--border-color);
+}
+
+.gcp-annotation-number {
+  background-color: var(--primary-color);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.gcp-annotation-text {
+  font-weight: 500;
+}

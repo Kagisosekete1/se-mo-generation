@@ -558,7 +558,9 @@
              <!-- Domain Pane -->
             <div class="settings-pane" id="pane-domain">
                 <h3>Connect Your Domain</h3>
-                <p class="form-group-description">Point your custom domain to your Se-Mo creations page.</p>
+                <p class="form-group-description">Point your custom domain to your Se-Mo creations page.
+                  <a href="#" id="show-gcp-guide" class="gcp-guide-link">I'm lost, show me a picture.</a>
+                </p>
                 <div id="domain-status-container">
                     <!-- Status will be rendered here -->
                 </div>
@@ -572,17 +574,28 @@
                     </div>
                 </form>
                 <div id="dns-instructions" style="display: none;">
-                    <h4 class="settings-subheader">Configuration Required</h4>
-                    <p>To connect your domain, please add the following DNS records in your domain provider's settings (e.g., Namecheap).</p>
+                    <h4 class="settings-subheader">Configuration Required on Namecheap</h4>
+                    <p>To connect your domain, log in to your Namecheap account and add the following DNS records for <strong><span id="user-domain-display"></span></strong>. Changes can take up to 48 hours to take effect.</p>
+
                     <div class="dns-record-card">
-                        <p><strong>Type:</strong> A</p>
-                        <p><strong>Name:</strong> @</p>
-                        <p><strong>Value:</strong> 76.76.21.21</p>
+                        <p><strong>For your root domain (<span class="user-domain-dynamic"></span>):</strong></p>
+                        <p>Google Cloud Run provides a set of IP addresses. You must add all of them.</p>
+                        <hr style="border:0; border-top: 1px solid var(--border-color); margin: 0.5rem 0;">
+                        <p><strong>Type:</strong> A &nbsp;&nbsp;&nbsp; <strong>Host:</strong> @ &nbsp;&nbsp;&nbsp; <strong>Value:</strong> 216.239.32.21</p>
+                        <p><strong>Type:</strong> A &nbsp;&nbsp;&nbsp; <strong>Host:</strong> @ &nbsp;&nbsp;&nbsp; <strong>Value:</strong> 216.239.34.21</p>
+                        <p><strong>Type:</strong> A &nbsp;&nbsp;&nbsp; <strong>Host:</strong> @ &nbsp;&nbsp;&nbsp; <strong>Value:</strong> 216.239.36.21</p>
+                        <p><strong>Type:</strong> A &nbsp;&nbsp;&nbsp; <strong>Host:</strong> @ &nbsp;&nbsp;&nbsp; <strong>Value:</strong> 216.239.38.21</p>
+                        <p><strong>Type:</strong> AAAA &nbsp; <strong>Host:</strong> @ &nbsp;&nbsp;&nbsp; <strong>Value:</strong> 2001:4860:4802:32::15</p>
+                        <p><strong>Type:</strong> AAAA &nbsp; <strong>Host:</strong> @ &nbsp;&nbsp;&nbsp; <strong>Value:</strong> 2001:4860:4802:34::15</p>
+                        <small>Note: These are example IPs. In a real setup, Google Cloud would provide you with a specific set of addresses.</small>
                     </div>
-                     <div class="dns-record-card">
-                        <p><strong>Type:</strong> CNAME</p>
-                        <p><strong>Name:</strong> www</p>
-                        <p><strong>Value:</strong> <span id="user-domain-cname">your-domain.com</span></p>
+
+                    <div class="dns-record-card">
+                        <p><strong>For the 'www' subdomain (www.<span class="user-domain-dynamic"></span>):</strong></p>
+                        <p>This will redirect 'www' traffic to your site.</p>
+                        <hr style="border:0; border-top: 1px solid var(--border-color); margin: 0.5rem 0;">
+                        <p><strong>Type:</strong> CNAME &nbsp;&nbsp;&nbsp; <strong>Host:</strong> www &nbsp;&nbsp;&nbsp; <strong>Value:</strong> ghs.googlehosted.com.</p>
+                        <small>Note the period at the end of 'ghs.googlehosted.com.'.</small>
                     </div>
                 </div>
             </div>
@@ -839,6 +852,64 @@
             <button id="pin-modal-close-button" class="settings-utility-button">Cancel</button>
         </div>
     </div>
+</div>
+
+<div id="gcp-guide-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 800px; text-align: left;">
+    <h3>Visual Guide: Finding "Custom Domains"</h3>
+    <p>Follow these two steps inside your Google Cloud Console. The parts you need to click are highlighted in blue.</p>
+    <div class="gcp-fake-ui">
+      <div class="gcp-step" id="gcp-step-1">
+        <div class="gcp-annotation" style="top: 110px; left: 10px;">
+          <div class="gcp-annotation-number">1</div>
+          <div class="gcp-annotation-text">First, click on the name of your service in the list.</div>
+        </div>
+        <div class="gcp-header">
+          <span>Cloud Run</span>
+        </div>
+        <div class="gcp-content">
+          <div class="gcp-table-header">
+            <span>Service</span>
+            <span>Region</span>
+            <span>Last deployed</span>
+          </div>
+          <div class="gcp-table-row clickable-area">
+            <span>se-mo-generation-140386533251</span>
+            <span>us-west1</span>
+            <span>...</span>
+          </div>
+          <div class="gcp-table-row">
+            <span>another-service</span>
+            <span>...</span>
+            <span>...</span>
+          </div>
+        </div>
+      </div>
+      <div class="gcp-step" id="gcp-step-2">
+         <div class="gcp-annotation" style="top: 50px; right: 10px;">
+          <div class="gcp-annotation-number">2</div>
+          <div class="gcp-annotation-text">On the next screen, click the "CUSTOM DOMAINS" tab.</div>
+        </div>
+        <div class="gcp-header">
+          <span>se-mo-generation-140386533251</span>
+        </div>
+        <div class="gcp-content">
+           <div class="gcp-tabs">
+             <span>REVISIONS</span>
+             <span>LOGS</span>
+             <span>METRICS</span>
+             <span class="clickable-area">CUSTOM DOMAINS</span>
+           </div>
+           <div class="gcp-page-content">
+             <p>This is where you will click "ADD MAPPING".</p>
+           </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content: center; margin-top: 1.5rem;">
+      <button id="gcp-guide-close-button" class="button button-primary">Got it, thanks!</button>
+    </div>
+  </div>
 </div>
 
 <script type="module" src="index.js"></script>
