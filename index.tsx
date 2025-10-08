@@ -86,6 +86,7 @@ let currentPromptText = '';
 let creationsCurrentPage = 1;
 let conversations: Conversation[] = [];
 let activeConversationId: string | null = null;
+let currentFilter: string = 'none';
 let isChatLoading = false;
 let pinAction: 'payment' | 'settings' | null = null;
 
@@ -132,6 +133,8 @@ let examplePromptsSelect: HTMLSelectElement;
 let upload: HTMLInputElement;
 let fileNameDisplay: HTMLSpanElement;
 let fileInputLabel: HTMLLabelElement;
+let imageFiltersContainer: HTMLDivElement;
+let filterOptionsContainer: HTMLDivElement;
 
 // Main Navigation
 let imageNavButton: HTMLButtonElement;
@@ -328,6 +331,8 @@ function cacheDOMElements() {
     shareButton = document.querySelector('#share-button') as HTMLButtonElement;
     viewCreationButton = document.querySelector('#view-creation-button') as HTMLButtonElement;
     imageSettings = document.querySelector('#image-settings') as HTMLDivElement;
+    imageFiltersContainer = document.querySelector('#image-filters-container') as HTMLDivElement;
+    filterOptionsContainer = document.querySelector('#filter-options') as HTMLDivElement;
     imageAspectRatioSelect = document.querySelector('#image-aspect-ratio-select') as HTMLSelectElement;
     imageFormatSelect = document.querySelector('#image-format-select') as HTMLSelectElement;
     resultImage = document.querySelector('#result-image') as HTMLImageElement;
@@ -642,6 +647,247 @@ function toggleAddCardView(showForm: boolean) {
     }
 }
 
+// FIX: Define missing chat functions, including loadConversations, to restore chat functionality.
+// --- Chat ---
+function showEmptyChatView() {
+    if (!chatMain || !chatMainHeader || !chatHistoryEl || !chatForm) return;
+
+    chatMainHeader.style.visibility = 'hidden';
+    chatHistoryEl.innerHTML = `
+        <div class="empty-chat-view">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="64" height="64"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+            <h2>Start a conversation</h2>
+            <p>Click "New Chat" to begin a new conversation with the assistant.</p>
+        </div>
+    `;
+    chatForm.style.display = 'none';
+    activeConversationId = null;
+    sessionStorage.removeItem('activeConversationId');
+}
+
+function renderConversationHistory() {
+    if (!chatHistoryEl || !activeConversationId) return;
+
+    const conversation = conversations.find(c => c.id === activeConversationId);
+    if (!conversation) {
+        chatHistoryEl.innerHTML = '';
+        return;
+    }
+
+    chatHistoryEl.innerHTML = '';
+    conversation.history.forEach(message => {
+        const messageEl = document.createElement('div');
+        messageEl.classList.add('chat-message', `message-${message.role}`);
+        
+        const text = message.parts.map(part => (part as { text: string }).text).join('');
+
+        // Basic markdown to HTML conversion
+        let htmlContent = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;").replace(/>/g, "&gt;") // Sanitize
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+            .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
+            .replace(/```([\s\S]*?)```/g, (_match, code) => `<pre><code>${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`) // Code blocks
+            .replace(/`(.*?)`/g, '<code>$1</code>') // Inline code
+            .replace(/\n/g, '<br>');
+
+        messageEl.innerHTML = `
+            <div class="message-avatar">${message.role === 'user' ? 'You' : 'AI'}</div>
+            <div class="message-content">${htmlContent}</div>
+        `;
+        chatHistoryEl.appendChild(messageEl);
+    });
+
+    chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+}
+
+function renderConversationsList() {
+    if (!chatList) return;
+    chatList.innerHTML = '';
+    
+    conversations.forEach(convo => {
+        const li = document.createElement('li');
+        li.dataset.id = convo.id;
+        li.className = `conversation-item ${convo.id === activeConversationId ? 'active' : ''}`;
+        li.innerHTML = `
+            <span>${convo.title}</span>
+            <button class="icon-button delete-conversation-btn" title="Delete Chat">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
+            </button>
+        `;
+        
+        li.addEventListener('click', (e) => {
+            if (!(e.target as HTMLElement).closest('.delete-conversation-btn')) {
+                handleConversationSelection(convo.id);
+            }
+        });
+        
+        const deleteBtn = li.querySelector('.delete-conversation-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteConversation(convo.id);
+            });
+        }
+        
+        chatList.appendChild(li);
+    });
+}
+
+function handleConversationSelection(id: string) {
+    const conversation = conversations.find(c => c.id === id);
+    if (!conversation || !chatMainHeader || !chatTitleEl || !chatHistoryEl || !chatForm) return;
+
+    activeConversationId = id;
+    sessionStorage.setItem('activeConversationId', id);
+    
+    // Update UI
+    chatMainHeader.style.visibility = 'visible';
+    chatForm.style.display = 'flex';
+    if(chatInput) chatInput.value = '';
+    chatTitleEl.textContent = conversation.title;
+    
+    renderConversationHistory();
+    renderConversationsList(); // To update active state
+}
+
+function deleteConversation(id: string) {
+    if (!confirm('Are you sure you want to delete this chat?')) return;
+
+    conversations = conversations.filter(c => c.id !== id);
+    saveConversations();
+
+    if (activeConversationId === id) {
+        if (conversations.length > 0) {
+            handleConversationSelection(conversations[0].id);
+        } else {
+            showEmptyChatView();
+        }
+    }
+    
+    renderConversationsList();
+}
+
+function loadConversations() {
+    if (!currentUser) return;
+    const savedConversations = localStorage.getItem(`conversations_${currentUser}`);
+    if (savedConversations) {
+        try {
+            conversations = JSON.parse(savedConversations);
+        } catch (e) {
+            console.error("Failed to parse conversations:", e);
+            conversations = [];
+        }
+    } else {
+        conversations = [];
+    }
+    
+    renderConversationsList();
+
+    if (conversations.length > 0) {
+        const lastActiveId = sessionStorage.getItem('activeConversationId');
+        const conversationExists = conversations.some(c => c.id === lastActiveId);
+
+        if (lastActiveId && conversationExists) {
+            handleConversationSelection(lastActiveId);
+        } else {
+            handleConversationSelection(conversations[0].id);
+        }
+    } else {
+        showEmptyChatView();
+    }
+}
+
+function saveConversations() {
+    if (!currentUser) return;
+    localStorage.setItem(`conversations_${currentUser}`, JSON.stringify(conversations));
+}
+
+async function handleChatSubmit(e?: Event) {
+    if (e) e.preventDefault();
+    if (isChatLoading || !chatInput || !activeConversationId) return;
+
+    const prompt = chatInput.value.trim();
+    if (!prompt) return;
+
+    const conversation = conversations.find(c => c.id === activeConversationId);
+    if (!conversation) return;
+
+    // Add user message to history
+    conversation.history.push({
+        role: 'user',
+        parts: [{ text: prompt }]
+    });
+
+    if (conversation.history.length === 1 && conversation.title === 'New Chat') {
+        const shortTitle = prompt.substring(0, 30) + (prompt.length > 30 ? '...' : '');
+        conversation.title = shortTitle;
+        if (chatTitleEl) chatTitleEl.textContent = shortTitle;
+        renderConversationsList();
+    }
+    
+    renderConversationHistory();
+    chatInput.value = '';
+    isChatLoading = true;
+    if (chatSendButton) chatSendButton.disabled = true;
+    if (chatInput) chatInput.disabled = true;
+
+    const loadingEl = document.createElement('div');
+    loadingEl.classList.add('chat-message', 'message-model', 'loading');
+    loadingEl.innerHTML = `
+        <div class="message-avatar">AI</div>
+        <div class="message-content"><div class="typing-indicator"></div></div>
+    `;
+    if (chatHistoryEl) {
+        chatHistoryEl.appendChild(loadingEl);
+        chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+    }
+    
+    try {
+        const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
+        const chat = ai.chats.create({
+            model: 'gemini-2.5-flash',
+            history: conversation.history.slice(0, -1)
+        });
+
+        const result = await chat.sendMessage({ message: prompt });
+        const responseText = result.text;
+        
+        conversation.history.push({
+            role: 'model',
+            parts: [{ text: responseText }]
+        });
+        saveConversations();
+
+    } catch (error) {
+        console.error('Chat generation failed:', error);
+        conversation.history.push({
+            role: 'model',
+            parts: [{ text: 'Sorry, I encountered an error. Please try again.' }]
+        });
+        showErrorModal(['The chat model failed to respond. This might be due to a network issue or an API error.'], 'Chat Error');
+    } finally {
+        isChatLoading = false;
+        if (chatSendButton) chatSendButton.disabled = false;
+        if (chatInput) chatInput.disabled = false;
+        if (loadingEl) loadingEl.remove();
+        renderConversationHistory();
+        if (chatInput) chatInput.focus();
+    }
+}
+
+async function handleNewChat() {
+    const newConversation: Conversation = {
+        id: `convo-${Date.now()}`,
+        title: 'New Chat',
+        history: [],
+    };
+    conversations.unshift(newConversation);
+    saveConversations();
+    renderConversationsList();
+    handleConversationSelection(newConversation.id);
+    if (chatInput) chatInput.focus();
+}
 
 // --- Authentication ---
 function checkAuthStatus() {
@@ -1277,6 +1523,7 @@ async function generateImageContent() {
         resultImage.style.display = 'block';
     }
     if (resultsContainer) resultsContainer.style.display = 'block';
+    if (imageFiltersContainer) imageFiltersContainer.style.display = 'block';
     if (saveCreationButton) saveCreationButton.disabled = false;
     if (shareButton) shareButton.disabled = false;
     if (viewCreationButton) viewCreationButton.disabled = false;
@@ -1291,7 +1538,19 @@ async function generate() {
   if (spinnerContainer) spinnerContainer.style.display = 'flex';
   if (statusEl) statusEl.innerText = '';
   if (resultsContainer) resultsContainer.style.display = 'none';
-  if (resultImage) resultImage.src = '';
+  if (imageFiltersContainer) imageFiltersContainer.style.display = 'none';
+  if (resultImage) {
+      resultImage.src = '';
+      resultImage.style.filter = 'none';
+  }
+  
+  // Reset filter state
+  currentFilter = 'none';
+  if (filterOptionsContainer) {
+      filterOptionsContainer.querySelector('.active')?.classList.remove('active');
+      filterOptionsContainer.querySelector('[data-filter="none"]')?.classList.add('active');
+  }
+
   if (saveCreationButton) saveCreationButton.disabled = true;
   if (shareButton) shareButton.disabled = true;
   if (viewCreationButton) viewCreationButton.disabled = true;
@@ -1698,20 +1957,49 @@ function handleDownload() {
         showErrorModal(['You have reached your daily download limit.'], 'Download Limit Reached');
         return;
     }
-    
-    const a = document.createElement('a');
-    a.href = currentCreation.data;
-    
-    const fileExtension = userSettings.imageFormat.split('/')[1];
-    a.download = `creation-${Date.now()}.${fileExtension}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
 
-    if (!userState.isPremium) {
-        userState.downloadsToday++;
-        saveUserState();
-        updateUserStatusUI();
+    const processDownload = (dataUrl: string) => {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        
+        const fileExtension = userSettings.imageFormat.split('/')[1];
+        a.download = `creation-${Date.now()}.${fileExtension}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        if (!userState.isPremium) {
+            userState.downloadsToday++;
+            saveUserState();
+            updateUserStatusUI();
+        }
+    };
+
+    if (currentFilter === 'none') {
+        processDownload(currentCreation.data);
+    } else {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                showErrorModal(['Could not process image for download.'], 'Download Failed');
+                return;
+            }
+
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            ctx.filter = currentFilter;
+            ctx.drawImage(img, 0, 0);
+
+            const filteredDataUrl = canvas.toDataURL(userSettings.imageFormat);
+            processDownload(filteredDataUrl);
+        };
+        img.onerror = () => {
+             showErrorModal(['Could not load image for filtering.'], 'Download Failed');
+        };
+        img.src = currentCreation.data;
     }
 }
 
@@ -1940,319 +2228,87 @@ async function handleShareChat() {
             }
         }
     } else {
-        showErrorModal(['Your browser does not support the Web Share API.'], 'Sharing Not Supported');
+        showErrorModal(['Your browser does not support the Web Share API. Please copy the text manually.'], 'Sharing Not Supported');
     }
 }
 
-function handleDeleteChat(id: string) {
-    if (confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
-        const chatIndex = conversations.findIndex(c => c.id === id);
-        if (chatIndex === -1) return;
+function switchMainView(view: 'image' | 'chat') {
+    if (!imageGeneratorView || !chatView || !imageNavButton || !chatNavButton) return;
 
-        conversations.splice(chatIndex, 1);
-        saveConversations();
-        
-        if (activeConversationId === id) {
-            if (conversations.length > 0) {
-                const newIndex = Math.min(chatIndex, conversations.length - 1);
-                handleSwitchChat(conversations[newIndex].id);
-            } else {
-                handleNewChat();
-            }
-        }
-        
-        renderChatList();
-    }
-}
-
-function loadConversations() {
-    if (!currentUser) return;
-    const saved = localStorage.getItem(`conversations_${currentUser}`);
-    conversations = saved ? JSON.parse(saved) : [];
-    renderChatList();
-    
-    if (conversations.length > 0) {
-        handleSwitchChat(conversations[0].id);
+    if (view === 'image') {
+        imageGeneratorView.style.display = 'block';
+        chatView.style.display = 'none';
+        imageNavButton.classList.add('active');
+        chatNavButton.classList.remove('active');
     } else {
-        handleNewChat();
+        imageGeneratorView.style.display = 'none';
+        chatView.style.display = 'flex';
+        imageNavButton.classList.remove('active');
+        chatNavButton.classList.add('active');
     }
 }
 
-function saveConversations() {
-    if (!currentUser) return;
-    localStorage.setItem(`conversations_${currentUser}`, JSON.stringify(conversations));
-}
-
-function renderChatList() {
-    if (!chatList) return;
-    chatList.innerHTML = '';
-    conversations.forEach(convo => {
-        const li = document.createElement('li');
-        li.className = 'chat-list-item';
-        li.dataset.id = convo.id;
-        if (convo.id === activeConversationId) {
-            li.classList.add('active');
-        }
-
-        const titleSpan = document.createElement('span');
-        titleSpan.className = 'chat-list-title';
-        titleSpan.textContent = convo.title;
-        
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'chat-delete-btn';
-        deleteBtn.title = 'Delete chat';
-        deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>`;
-
-        deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent switching to this chat
-            handleDeleteChat(convo.id);
-        });
-
-        li.appendChild(titleSpan);
-        li.appendChild(deleteBtn);
-
-        li.addEventListener('click', () => handleSwitchChat(convo.id));
-        chatList.appendChild(li);
-    });
-}
-
-function renderChatHistory(history: Content[]) {
-    if (!chatHistoryEl) return;
-    chatHistoryEl.innerHTML = '';
-    history.forEach(message => {
-        const role = message.role as 'user' | 'model';
-        const text = message.parts.map(part => (part as { text: string }).text).join('');
-        renderChatMessage(text, role);
-    });
-    chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
-}
-
-function handleSwitchChat(id: string) {
-    activeConversationId = id;
-    const conversation = conversations.find(c => c.id === id);
-    if (conversation) {
-        renderChatHistory(conversation.history);
-        if (chatTitleEl) chatTitleEl.textContent = conversation.title;
-    }
-    renderChatList(); // To update active state styling
-}
-
-const initialGreeting: Content = {
-    role: 'model',
-    parts: [{ text: "Hello! I'm Se-Mo, your creative assistant. How can I help you today? You can ask me to write a proposal, generate ideas, or find information for you." }]
-};
-
-function handleNewChat() {
-    activeConversationId = null;
-    chatHistoryEl.innerHTML = '';
-    renderChatMessage((initialGreeting.parts[0] as { text: string }).text, 'model');
-    chatInput.value = '';
-    chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-    renderChatList(); // To remove active state from list
-    if (chatTitleEl) chatTitleEl.textContent = "New Conversation";
-}
-
-function parseSimpleMarkdown(text: string): string {
-    return text
-        .replace(/```([\s\S]*?)```/g, (_match, code) => `<pre><code>${code.trim()}</code></pre>`)
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>');
-}
-
-function renderChatMessage(message: string, role: 'user' | 'model', sources?: any[]) {
-    const messageWrapper = document.createElement('div');
-    messageWrapper.className = `chat-message ${role}`;
-
-    const messageContent = document.createElement('div');
-    messageContent.className = 'chat-message-content';
+// --- Init & Event Listeners ---
+function init() {
+    cacheDOMElements();
     
-    if (role === 'model' && message === '') { // This is a loading indicator
-        messageContent.innerHTML = `
-            <div class="chat-loading-indicator">
-                <div class="dot"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
-            </div>
-        `;
-    } else {
-        messageContent.innerHTML = parseSimpleMarkdown(message);
-    }
-    
-    messageWrapper.appendChild(messageContent);
+    document.body.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
 
-    if (sources && sources.length > 0) {
-        const sourcesContainer = document.createElement('div');
-        sourcesContainer.className = 'grounding-sources';
-        sourcesContainer.innerHTML = '<strong>Sources:</strong>';
-        const sourcesList = document.createElement('ol');
-        sources.forEach(source => {
-            if (source.web && source.web.uri) {
-                const li = document.createElement('li');
-                li.innerHTML = `<a href="${source.web.uri}" target="_blank" rel="noopener noreferrer" class="source-link">${source.web.title || source.web.uri}</a>`;
-                sourcesList.appendChild(li);
-            }
-        });
-        sourcesContainer.appendChild(sourcesList);
-        messageWrapper.appendChild(sourcesContainer);
-    }
-
-    chatHistoryEl.appendChild(messageWrapper);
-    chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
-    return messageWrapper;
-}
-
-async function handleChatSubmit(e?: Event) {
-    if (e) e.preventDefault();
-    if (isChatLoading || chatInput.value.trim() === '') return;
-
-    const userInput = chatInput.value.trim();
-    renderChatMessage(userInput, 'user');
-
-    let currentHistory: Content[];
-    let isNewChat = false;
-
-    if (activeConversationId === null) {
-        isNewChat = true;
-        currentHistory = [];
-    } else {
-        const conversation = conversations.find(c => c.id === activeConversationId);
-        currentHistory = conversation ? [...conversation.history] : [];
-    }
-
-    currentHistory.push({ role: 'user', parts: [{ text: userInput }] });
-
-    // UI updates
-    chatInput.value = '';
-    chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-    isChatLoading = true;
-    const loadingIndicator = renderChatMessage('', 'model');
-
-    try {
-        const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: currentHistory,
-            config: {
-                systemInstruction: "You are a helpful and professional writing assistant. Your responses should be well-structured, using paragraphs and lists where appropriate. Ensure your writing is grammatically correct, coherent, and properly spelled. Be clear and concise.",
-                tools: [{googleSearch: {}}],
-            },
-        });
-
-        const modelResponse = response.text;
-        const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-        
-        currentHistory.push({ role: 'model', parts: [{ text: modelResponse }] });
-        
-        if (isNewChat) {
-            const newId = `chat_${Date.now()}`;
-            const newTitle = userInput.split(' ').slice(0, 5).join(' ') + (userInput.length > 30 ? '...' : '');
-            const newConversation: Conversation = {
-                id: newId,
-                title: newTitle,
-                history: currentHistory
-            };
-            conversations.unshift(newConversation);
-            activeConversationId = newId;
-            if (chatTitleEl) chatTitleEl.textContent = newTitle;
-            renderChatList();
-        } else {
-            const conversation = conversations.find(c => c.id === activeConversationId);
-            if (conversation) {
-                conversation.history = currentHistory;
-            }
-        }
-        saveConversations();
-        
-        const messageContent = loadingIndicator.querySelector('.chat-message-content') as HTMLDivElement;
-        if(messageContent) messageContent.innerHTML = parseSimpleMarkdown(modelResponse);
-        if (groundingChunks && groundingChunks.length > 0) {
-            const sourcesContainer = document.createElement('div');
-            sourcesContainer.className = 'grounding-sources';
-            sourcesContainer.innerHTML = '<strong>Sources:</strong>';
-            const sourcesList = document.createElement('ol');
-            groundingChunks.forEach(source => {
-                 if (source.web && source.web.uri) {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<a href="${source.web.uri}" target="_blank" rel="noopener noreferrer" class="source-link">${source.web.title || source.web.uri}</a>`;
-                    sourcesList.appendChild(li);
-                }
-            });
-            sourcesContainer.appendChild(sourcesList);
-            loadingIndicator.appendChild(sourcesContainer);
+        // Close profile dropdown if clicked outside
+        if (profileContainer && !profileContainer.contains(target)) {
+            profileDropdown.classList.remove('visible');
         }
 
-    } catch (err) {
-        const errorMessage = (err as Error).message || 'An unknown error occurred.';
-        const errorContent = loadingIndicator.querySelector('.chat-message-content') as HTMLDivElement;
-        if(errorContent) {
-            errorContent.innerHTML = `Sorry, something went wrong. Please try again. <br><small>Error: ${errorMessage}</small>`;
-            errorContent.style.color = 'var(--danger-color)';
+        // Upgrade CTA in status
+        if (target.classList.contains('upgrade-cta')) {
+            if (subscriptionModal) subscriptionModal.style.display = 'flex';
         }
-    } finally {
-        isChatLoading = false;
-        chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-        chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
-    }
-}
-
-
-function setupEventListeners() {
-    // --- Auth ---
-    if (loginForm) loginForm.addEventListener('submit', handleLogin);
-    if (registerForm) registerForm.addEventListener('submit', handleRegister);
-    if (forgotPasswordForm) forgotPasswordForm.addEventListener('submit', handleForgotPasswordRequest);
-    if (resetPasswordForm) resetPasswordForm.addEventListener('submit', handlePasswordReset);
-    if (authToggleLink) authToggleLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        switchAuthView(authToggleLink.dataset.mode as any);
     });
+
+    // Auth
+    if (authToggleLink) {
+        authToggleLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const mode = (e.target as HTMLAnchorElement).dataset.mode as 'login' | 'register' | 'forgot' | 'reset';
+            switchAuthView(mode);
+        });
+    }
     if (forgotPasswordLink) forgotPasswordLink.addEventListener('click', (e) => {
         e.preventDefault();
         switchAuthView('forgot');
     });
-    setupAuthLegalTabs();
+    if (loginForm) loginForm.addEventListener('submit', handleLogin);
+    if (registerForm) registerForm.addEventListener('submit', handleRegister);
+    if (forgotPasswordForm) forgotPasswordForm.addEventListener('submit', handleForgotPasswordRequest);
+    if (resetPasswordForm) resetPasswordForm.addEventListener('submit', handlePasswordReset);
+    if (authLegalTabs.length > 0) setupAuthLegalTabs();
 
-    // --- Main Navigation ---
-    [imageNavButton, chatNavButton].forEach(button => {
-        button.addEventListener('click', () => {
-            const view = button.dataset.view;
-            imageGeneratorView.style.display = view === 'image' ? 'block' : 'none';
-            chatView.style.display = view === 'chat' ? 'flex' : 'none';
-            imageNavButton.classList.toggle('active', view === 'image');
-            chatNavButton.classList.toggle('active', view === 'chat');
-        });
-    });
-
-    // --- Main UI & Generation ---
+    // Main UI
     if (generateButton) generateButton.addEventListener('click', generate);
     if (aiAssistButton) aiAssistButton.addEventListener('click', handleAiAssist);
-    if (promptEl) promptEl.addEventListener('input', (e) => {
-        currentPromptText = (e.target as HTMLTextAreaElement).value;
-        if (generateButton) generateButton.disabled = currentPromptText.trim() === '' && !base64data;
-        if (aiAssistButton) aiAssistButton.disabled = currentPromptText.trim() === '';
-    });
-    if (examplePromptsSelect) examplePromptsSelect.addEventListener('change', (e) => {
-        const value = (e.target as HTMLSelectElement).value;
-        if (value && promptEl) {
-            promptEl.value = value;
-            promptEl.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-    });
+    if (promptEl) {
+        promptEl.addEventListener('input', (e) => {
+            currentPromptText = (e.target as HTMLTextAreaElement).value;
+            if(generateButton) generateButton.disabled = currentPromptText.trim() === '';
+            // Auto-resize textarea
+            promptEl.style.height = 'auto';
+            promptEl.style.height = `${promptEl.scrollHeight}px`;
+        });
+    }
     if (upload) upload.addEventListener('change', handleFileUpload);
     if (clearPreviewButton) clearPreviewButton.addEventListener('click', clearPreview);
     
-    // --- Chat ---
+    // Main Navigation
+    if(imageNavButton) imageNavButton.addEventListener('click', () => switchMainView('image'));
+    if(chatNavButton) chatNavButton.addEventListener('click', () => switchMainView('chat'));
+
+    // Chat
+    if (chatForm) chatForm.addEventListener('submit', handleChatSubmit);
+    if (chatSendButton) chatSendButton.addEventListener('click', () => handleChatSubmit());
     if (newChatButton) newChatButton.addEventListener('click', handleNewChat);
     if (shareChatButton) shareChatButton.addEventListener('click', handleShareChat);
-    if (chatForm) chatForm.addEventListener('submit', handleChatSubmit);
-    if (chatInput) {
-        chatInput.addEventListener('input', () => {
-            if (chatSendButton) {
-                chatSendButton.disabled = chatInput.value.trim() === '';
-            }
-            chatInput.style.height = 'auto';
-            chatInput.style.height = `${chatInput.scrollHeight}px`;
-        });
+     if (chatInput) {
         chatInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -2261,51 +2317,166 @@ function setupEventListeners() {
         });
     }
 
-    // --- Results Actions ---
+    // Daily Prompts
+    if (refreshPromptsButton) {
+        refreshPromptsButton.addEventListener('click', (e) => {
+            const btn = e.currentTarget as HTMLButtonElement;
+            const icon = btn.querySelector('svg');
+            icon?.classList.add('rotating');
+            populateDailyPrompts();
+            setTimeout(() => icon?.classList.remove('rotating'), 500);
+        });
+    }
+
+    // Results
     if (downloadButton) downloadButton.addEventListener('click', handleDownload);
     if (saveCreationButton) saveCreationButton.addEventListener('click', handleSaveCreation);
     if (shareButton) shareButton.addEventListener('click', handleShare);
     if (viewCreationButton) viewCreationButton.addEventListener('click', viewCurrentCreation);
 
-    // --- Daily Prompts ---
-    if (refreshPromptsButton) refreshPromptsButton.addEventListener('click', populateDailyPrompts);
-
-    // --- Profile & Modals ---
-    if (profileButton) profileButton.addEventListener('click', () => {
-        if(profileDropdown) profileDropdown.style.display = profileDropdown.style.display === 'block' ? 'none' : 'block';
-    });
-    document.addEventListener('click', (e) => {
-        if (profileContainer && !profileContainer.contains(e.target as Node)) {
-            if (profileDropdown) profileDropdown.style.display = 'none';
-        }
-    });
+    // Profile Dropdown
+    if (profileButton) {
+        profileButton.addEventListener('click', () => {
+            if (profileDropdown) profileDropdown.classList.toggle('visible');
+        });
+    }
     if (logoutButton) logoutButton.addEventListener('click', handleLogout);
-    if (settingsButton) settingsButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        openSettingsModal();
-        if(profileDropdown) profileDropdown.style.display = 'none';
-    });
-    if (myCreationsButton) myCreationsButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        openCreationsModal();
-        if(profileDropdown) profileDropdown.style.display = 'none';
-    });
-    
-    // --- Modal Close Buttons ---
-    if(modalCloseButton) modalCloseButton.addEventListener('click', () => { if(errorModal) errorModal.style.display = 'none' });
-    if(subscriptionModalCloseButton) subscriptionModalCloseButton.addEventListener('click', () => { if(subscriptionModal) subscriptionModal.style.display = 'none' });
-    if(settingsModalCloseButton) settingsModalCloseButton.addEventListener('click', () => { if(settingsModal) settingsModal.style.display = 'none' });
-    if(creationsModalCloseButton) creationsModalCloseButton.addEventListener('click', () => { if(creationsModal) creationsModal.style.display = 'none' });
-    if(largeViewCloseButton) largeViewCloseButton.addEventListener('click', () => { if(largeViewModal) largeViewModal.style.display = 'none' });
-    if(shareFallbackCloseButton) shareFallbackCloseButton.addEventListener('click', () => { if(shareFallbackModal) shareFallbackModal.style.display = 'none' });
-    if (pinModalCloseButton) pinModalCloseButton.addEventListener('click', () => parentalPinModal.style.display = 'none');
+    if (settingsButton) settingsButton.addEventListener('click', openSettingsModal);
+    if (myCreationsButton) myCreationsButton.addEventListener('click', openCreationsModal);
 
-    // --- Settings Listeners ---
-    setupSettingsNavigation();
+    // Modals
+    if (modalCloseButton) {
+        modalCloseButton.addEventListener('click', () => {
+            if (errorModal) errorModal.style.display = 'none';
+        });
+    }
+    if (subscriptionModalCloseButton) {
+        subscriptionModalCloseButton.addEventListener('click', () => {
+            if (subscriptionModal) subscriptionModal.style.display = 'none';
+        });
+    }
+    if (settingsModalCloseButton) {
+        settingsModalCloseButton.addEventListener('click', () => {
+            if (settingsModal) settingsModal.style.display = 'none';
+        });
+    }
+    if (creationsModalCloseButton) {
+        creationsModalCloseButton.addEventListener('click', () => {
+            if (creationsModal) creationsModal.style.display = 'none';
+        });
+    }
+    if(shareFallbackCloseButton) {
+        shareFallbackCloseButton.addEventListener('click', () => {
+            shareFallbackModal.style.display = 'none';
+        });
+    }
+    
+    // Large View Modal
+    if(largeViewCloseButton) largeViewCloseButton.addEventListener('click', () => {
+        if(largeViewModal) largeViewModal.style.display = 'none';
+        if(largeViewImage) largeViewImage.src = '';
+        if(largeViewVideo) largeViewVideo.src = '';
+    });
+
+    // Payment Modal
+    pricingPlans.forEach(plan => {
+        plan.addEventListener('click', () => handlePlanSelection(plan));
+    });
+    if (continuePaymentButton) continuePaymentButton.addEventListener('click', showPaymentSelectionView);
+    if (backToPlansButton) backToPlansButton.addEventListener('click', () => {
+        if(planSelectionView) planSelectionView.style.display = 'block';
+        if(paymentSelectionView) paymentSelectionView.style.display = 'none';
+    });
+    if (paypalPaymentButton) paypalPaymentButton.addEventListener('click', handlePayPalPayment);
+
+
+    // Settings Modal
+    if (settingsNavLinks.length > 0) setupSettingsNavigation();
     if (profileForm) profileForm.addEventListener('submit', handleProfileUpdate);
     if (profilePictureInput) profilePictureInput.addEventListener('change', handleAvatarChange);
     if (linksForm) linksForm.addEventListener('submit', handleLinksUpdate);
     if (passwordForm) passwordForm.addEventListener('submit', handlePasswordUpdate);
     if (generationSettingsForm) generationSettingsForm.addEventListener('submit', handleGenerationSettingsUpdate);
     if (notificationsForm) notificationsForm.addEventListener('submit', handleNotificationsUpdate);
-    if (domainForm)
+    if (settingDarkModeToggle) settingDarkModeToggle.addEventListener('change', handleThemeToggle);
+    if (languageRegionForm) languageRegionForm.addEventListener('submit', handleLanguageRegionUpdate);
+    if (creatorProgramForm) creatorProgramForm.addEventListener('submit', handleCreatorApplication);
+    
+    // Domain Settings
+    if (domainForm) domainForm.addEventListener('submit', handleConnectDomain);
+
+    // Payment Settings
+    if (addNewCardButton) addNewCardButton.addEventListener('click', () => toggleAddCardView(true));
+    if (cancelAddCardButton) cancelAddCardButton.addEventListener('click', () => toggleAddCardView(false));
+    if (addCardForm) addCardForm.addEventListener('submit', handleSaveCard);
+    
+    // Privacy & Security Settings
+    if (deleteAccountButton) deleteAccountButton.addEventListener('click', () => {
+        if (deleteAccountModal) deleteAccountModal.style.display = 'flex';
+        if (deleteConfirmInput) {
+            deleteConfirmInput.value = '';
+            deleteConfirmInput.dispatchEvent(new Event('input')); // Trigger check
+        }
+    });
+    if (cancelDeleteButton) cancelDeleteButton.addEventListener('click', () => {
+        if (deleteAccountModal) deleteAccountModal.style.display = 'none';
+    });
+    if (confirmDeleteButton) confirmDeleteButton.addEventListener('click', handleDeleteAccount);
+    if (deleteConfirmInput) {
+        deleteConfirmInput.addEventListener('input', () => {
+            if (confirmDeleteButton) {
+                confirmDeleteButton.disabled = deleteConfirmInput.value.toLowerCase() !== 'delete';
+            }
+        });
+    }
+
+    // PIN Modal
+    if (pinModalCloseButton) pinModalCloseButton.addEventListener('click', () => {
+        if (parentalPinModal) parentalPinModal.style.display = 'none';
+        pinAction = null;
+    });
+
+    // Creations Gallery
+    if (creationsPrevPageButton) creationsPrevPageButton.addEventListener('click', () => renderCreations(creationsCurrentPage - 1));
+    if (creationsNextPageButton) creationsNextPageButton.addEventListener('click', () => renderCreations(creationsCurrentPage + 1));
+    if (deleteSelectedButton) {
+        deleteSelectedButton.addEventListener('click', () => {
+            const selectedCheckboxes = creationsGallery.querySelectorAll<HTMLInputElement>('.creation-checkbox:checked');
+            const idsToDelete = Array.from(selectedCheckboxes).map(cb => parseInt(cb.dataset.id || '0', 10));
+            if (idsToDelete.length > 0 && confirm(`Are you sure you want to delete ${idsToDelete.length} creation(s)?`)) {
+                deleteCreations(idsToDelete);
+            }
+        });
+    }
+
+    // Filters
+    if (filterOptionsContainer) {
+        filterOptionsContainer.addEventListener('click', (e) => {
+            const target = e.target as HTMLButtonElement;
+            if (target.tagName === 'BUTTON') {
+                filterOptionsContainer.querySelector('.active')?.classList.remove('active');
+                target.classList.add('active');
+                currentFilter = target.dataset.filter || 'none';
+                if (resultImage) {
+                    resultImage.style.filter = currentFilter === 'none' ? '' : currentFilter;
+                }
+            }
+        });
+    }
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+    
+    // Hide splash screen and check auth
+    setTimeout(() => {
+        if (splashScreen) {
+            splashScreen.classList.add('hidden');
+            splashScreen.addEventListener('transitionend', () => {
+                splashScreen.style.display = 'none';
+            });
+        }
+        checkAuthStatus();
+    }, 1000); // Simulate loading
+});

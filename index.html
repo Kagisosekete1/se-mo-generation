@@ -220,6 +220,18 @@
         <div id="results-container">
             <h2>Your Creation</h2>
             <img id="result-image" alt="Generated image">
+            <div id="image-filters-container" style="display: none;">
+                <h3>Apply a Filter</h3>
+                <div id="filter-options">
+                    <button class="filter-button active" data-filter="none">Original</button>
+                    <button class="filter-button" data-filter="grayscale(100%)">Grayscale</button>
+                    <button class="filter-button" data-filter="sepia(100%)">Sepia</button>
+                    <button class="filter-button" data-filter="invert(100%)">Invert</button>
+                    <button class="filter-button" data-filter="saturate(2)">Saturate</button>
+                    <button class="filter-button" data-filter="contrast(1.5)">Contrast</button>
+                    <button class="filter-button" data-filter="blur(3px)">Blur</button>
+                </div>
+            </div>
             <div class="results-actions">
                 <button id="download-button">Download Image</button>
                 <button id="save-creation-button" disabled>Save Creation</button>
