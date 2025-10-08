@@ -378,6 +378,10 @@
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5c-5.25 0-9.5 4.25-9.5 9.5s4.25 9.5 9.5 9.5 9.5-4.25 9.5-9.5S17.25 2.5 12 2.5zm-3.6 5.1L12 9.7l3.6-2.1 2.1 3.6-2.1 3.6-3.6 2.1-3.6-2.1-2.1-3.6 2.1-3.6zm5.7 6.3l1.5-2.6-2.6-1.5-1.5 2.6 2.6 1.5z"/></svg>
                 <span>Generation</span>
             </button>
+            <button class="settings-nav-link" data-pane="domain">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                <span>Domain</span>
+            </button>
             <button class="settings-nav-link" data-pane="notifications">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
                 <span>Notifications</span>
@@ -538,6 +542,37 @@
                         <button type="submit" class="settings-save-button">Save Generation Settings</button>
                     </div>
                 </form>
+            </div>
+             <!-- Domain Pane -->
+            <div class="settings-pane" id="pane-domain">
+                <h3>Connect Your Domain</h3>
+                <p class="form-group-description">Point your custom domain to your Se-Mo creations page.</p>
+                <div id="domain-status-container">
+                    <!-- Status will be rendered here -->
+                </div>
+                <form id="domain-form" class="settings-form">
+                    <div class="form-group">
+                        <label for="domain-name-input">Domain Name</label>
+                        <input type="text" id="domain-name-input" placeholder="e.g., my-awesome-art.com">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="settings-save-button">Connect Domain</button>
+                    </div>
+                </form>
+                <div id="dns-instructions" style="display: none;">
+                    <h4 class="settings-subheader">Configuration Required</h4>
+                    <p>To connect your domain, please add the following DNS records in your domain provider's settings (e.g., Namecheap).</p>
+                    <div class="dns-record-card">
+                        <p><strong>Type:</strong> A</p>
+                        <p><strong>Name:</strong> @</p>
+                        <p><strong>Value:</strong> 76.76.21.21</p>
+                    </div>
+                     <div class="dns-record-card">
+                        <p><strong>Type:</strong> CNAME</p>
+                        <p><strong>Name:</strong> www</p>
+                        <p><strong>Value:</strong> <span id="user-domain-cname">your-domain.com</span></p>
+                    </div>
+                </div>
             </div>
             <!-- Notifications Pane -->
             <div class="settings-pane" id="pane-notifications">

@@ -70,6 +70,10 @@ let userSettings = {
     theme: 'light',
     language: 'en-US',
     timezone: 'Africa/Johannesburg',
+    domain: {
+        name: 'se-mo.site',
+        status: 'disconnected', // disconnected, pending, connected
+    }
 };
 let currentCreation = {
     data: '',
@@ -225,6 +229,13 @@ let creatorAppliedMessage: HTMLDivElement;
 let creatorNameInput: HTMLInputElement;
 let creatorLinkInput: HTMLInputElement;
 let creatorReasonInput: HTMLTextAreaElement;
+
+// Domain Settings Elements
+let domainForm: HTMLFormElement;
+let domainNameInput: HTMLInputElement;
+let domainStatusContainer: HTMLDivElement;
+let dnsInstructions: HTMLDivElement;
+let userDomainCname: HTMLSpanElement;
 
 // Privacy & Security Elements
 let manageProjectsButton: HTMLButtonElement;
@@ -424,6 +435,13 @@ function cacheDOMElements() {
     creatorNameInput = document.querySelector('#creator-name-input') as HTMLInputElement;
     creatorLinkInput = document.querySelector('#creator-link-input') as HTMLInputElement;
     creatorReasonInput = document.querySelector('#creator-reason-input') as HTMLTextAreaElement;
+
+    // Domain Settings
+    domainForm = document.querySelector('#domain-form') as HTMLFormElement;
+    domainNameInput = document.querySelector('#domain-name-input') as HTMLInputElement;
+    domainStatusContainer = document.querySelector('#domain-status-container') as HTMLDivElement;
+    dnsInstructions = document.querySelector('#dns-instructions') as HTMLDivElement;
+    userDomainCname = document.querySelector('#user-domain-cname') as HTMLSpanElement;
 
 
     // Privacy & Security
@@ -970,6 +988,7 @@ function loadUserSettings() {
         theme: savedSettings.theme || 'light',
         language: savedSettings.language || 'en-US',
         timezone: savedSettings.timezone || 'Africa/Johannesburg',
+        domain: savedSettings.domain || { name: 'se-mo.site', status: 'disconnected' },
     };
 }
 
@@ -1049,6 +1068,63 @@ function showPaymentSelectionView() {
     const planDuration = selectedPremiumPlan === 'monthly' ? '/ month' : '/ year';
 
     selectedPlanInfo.textContent = `Selected Plan: ${planName} (${planPrice}${planDuration})`;
+}
+
+// FIX: Define the missing `showPinModal` function.
+function showPinModal(view: 'enter' | 'set') {
+    if (!parentalPinModal) return;
+
+    // Reset everything first
+    pinInputs.forEach(input => input.value = '');
+    if (pinMessage) {
+        pinMessage.textContent = '';
+        pinMessage.className = 'pin-message'; // Reset classes
+    }
+    
+    // Hide all main views
+    if(pinEnterView) pinEnterView.style.display = 'none';
+    if(pinSetView) pinSetView.style.display = 'none';
+
+    // Show the correct view and set titles
+    if (view === 'enter') {
+        if(pinEnterView) pinEnterView.style.display = 'block';
+        if(pinModalTitle) pinModalTitle.textContent = 'Enter PIN';
+        if(pinModalSubtitle) pinModalSubtitle.textContent = 'Please enter your PIN to continue.';
+        if(forgotPinLink) forgotPinLink.style.display = 'block';
+    } else if (view === 'set') {
+        if(pinSetView) pinSetView.style.display = 'block';
+        if(pinModalTitle) pinModalTitle.textContent = 'Set a PIN';
+        if(pinModalSubtitle) pinModalSubtitle.textContent = 'Create a 4-digit PIN to secure actions on your account.';
+        if(forgotPinLink) forgotPinLink.style.display = 'none';
+        // Reset set view to first step
+        if(pinSetInputContainer) pinSetInputContainer.style.display = 'block';
+        if(pinConfirmInputContainer) pinConfirmInputContainer.style.display = 'none';
+        if(setPinButton) {
+            setPinButton.textContent = 'Next';
+            setPinButton.disabled = true;
+        }
+    }
+    
+    if (pinAction === 'payment') {
+        if (view === 'enter' && pinModalSubtitle) {
+            pinModalSubtitle.textContent = 'Please enter your PIN to authorize this payment.';
+        } else if (view === 'set' && pinModalSubtitle) {
+            pinModalSubtitle.textContent = 'For added security, please set a PIN before making a payment.';
+        }
+    } else if (pinAction === 'settings') {
+        if (view === 'enter' && pinModalSubtitle) {
+            pinModalSubtitle.textContent = 'Please enter your PIN to change sensitive settings.';
+        } else if (view === 'set' && pinModalSubtitle) {
+            pinModalSubtitle.textContent = 'Set a PIN to protect your account settings.';
+        }
+    }
+
+    parentalPinModal.style.display = 'flex';
+    // Focus the first visible input
+    const firstInput = parentalPinModal.querySelector<HTMLInputElement>('div[style*="display: block"] .pin-input');
+    if (firstInput) {
+        firstInput.focus();
+    }
 }
 
 function handlePayPalPayment() {
@@ -1340,6 +1416,9 @@ function openSettingsModal() {
     if (settingImageAspectRatioSelect) settingImageAspectRatioSelect.value = userSettings.imageAspectRatio;
     if (settingImageFormatSelect) settingImageFormatSelect.value = userSettings.imageFormat;
 
+    // Populate Domain
+    renderDomainStatus();
+
     // Populate Notifications
     if (settingNotificationsFeatures) settingNotificationsFeatures.checked = userSettings.notifications.featureUpdates;
     if (settingNotificationsExports) settingNotificationsExports.checked = userSettings.notifications.exportAlerts;
@@ -1531,6 +1610,67 @@ function handleDeleteAccount() {
     sessionStorage.clear();
     
     window.location.href = window.location.pathname + '?message=account_deleted';
+}
+
+// --- Domain ---
+function renderDomainStatus() {
+    if (!domainStatusContainer || !dnsInstructions || !domainNameInput || !userDomainCname) return;
+
+    domainStatusContainer.className = `status-${userSettings.domain.status}`;
+    domainNameInput.value = userSettings.domain.name;
+    userDomainCname.textContent = userSettings.domain.name;
+
+    switch (userSettings.domain.status) {
+        case 'disconnected':
+            domainStatusContainer.innerHTML = `
+                <h4><span class="status-badge">Disconnected</span> Not Connected</h4>
+                <p>Connect your domain to show off your creations.</p>
+            `;
+            dnsInstructions.style.display = 'none';
+            break;
+        case 'pending':
+            domainStatusContainer.innerHTML = `
+                <h4><span class="status-badge">Pending</span> Verifying Domain</h4>
+                <p>This may take up to 48 hours. Make sure your DNS records are set correctly.</p>
+            `;
+            dnsInstructions.style.display = 'block';
+            break;
+        case 'connected':
+            domainStatusContainer.innerHTML = `
+                <h4><span class="status-badge">Connected</span> Domain is Live</h4>
+                <p>Your creations are now available at <a href="http://${userSettings.domain.name}" target="_blank" rel="noopener noreferrer">${userSettings.domain.name}</a>.</p>
+            `;
+            dnsInstructions.style.display = 'none';
+            break;
+    }
+}
+
+function handleConnectDomain(e: Event) {
+    e.preventDefault();
+    if (!domainNameInput) return;
+    const domainName = domainNameInput.value.trim();
+    if (!domainName) {
+        showErrorModal(['Please enter a valid domain name.'], 'Invalid Domain');
+        return;
+    }
+
+    userSettings.domain.name = domainName;
+    userSettings.domain.status = 'pending';
+    saveUserSettings();
+    renderDomainStatus();
+    showSettingsToast('Domain verification initiated.');
+
+    // Simulate verification check
+    setTimeout(() => {
+        // In a real app, you'd poll a backend here.
+        // For this demo, we'll auto-connect after a short delay.
+        if (userSettings.domain.status === 'pending') {
+            userSettings.domain.status = 'connected';
+            saveUserSettings();
+            renderDomainStatus();
+            showSettingsToast('Domain successfully connected!', 'success');
+        }
+    }, 8000);
 }
 
 // --- Creations & Gallery ---
@@ -2168,200 +2308,4 @@ function setupEventListeners() {
     if (passwordForm) passwordForm.addEventListener('submit', handlePasswordUpdate);
     if (generationSettingsForm) generationSettingsForm.addEventListener('submit', handleGenerationSettingsUpdate);
     if (notificationsForm) notificationsForm.addEventListener('submit', handleNotificationsUpdate);
-    if (settingDarkModeToggle) settingDarkModeToggle.addEventListener('change', handleThemeToggle);
-    if (languageRegionForm) languageRegionForm.addEventListener('submit', handleLanguageRegionUpdate);
-    if (creatorProgramForm) creatorProgramForm.addEventListener('submit', handleCreatorApplication);
-    if (deleteAccountButton) deleteAccountButton.addEventListener('click', () => { if(deleteAccountModal) deleteAccountModal.style.display = 'flex'; });
-    if (cancelDeleteButton) cancelDeleteButton.addEventListener('click', () => {
-        if(deleteAccountModal) deleteAccountModal.style.display = 'none';
-        if(deleteConfirmInput) deleteConfirmInput.value = '';
-    });
-    if (deleteConfirmInput) deleteConfirmInput.addEventListener('input', () => {
-        if(confirmDeleteButton) confirmDeleteButton.disabled = deleteConfirmInput.value !== currentUser;
-    });
-    if (confirmDeleteButton) confirmDeleteButton.addEventListener('click', handleDeleteAccount);
-    
-    // --- Creations Gallery ---
-    if(creationsPrevPageButton) creationsPrevPageButton.addEventListener('click', () => renderCreations(creationsCurrentPage - 1));
-    if(creationsNextPageButton) creationsNextPageButton.addEventListener('click', () => renderCreations(creationsCurrentPage + 1));
-    if(deleteSelectedButton) deleteSelectedButton.addEventListener('click', () => {
-        const selectedCheckboxes = creationsGallery.querySelectorAll<HTMLInputElement>('.creation-checkbox:checked');
-        const idsToDelete = Array.from(selectedCheckboxes).map(cb => parseInt(cb.dataset.id || '0'));
-        if (idsToDelete.length > 0 && confirm(`Are you sure you want to delete ${idsToDelete.length} selected creations?`)) {
-            deleteCreations(idsToDelete);
-        }
-    });
-
-    // --- Payment & PIN ---
-    pricingPlans.forEach(plan => {
-        plan.addEventListener('click', () => handlePlanSelection(plan));
-    });
-    if (continuePaymentButton) continuePaymentButton.addEventListener('click', showPaymentSelectionView);
-    if (backToPlansButton) backToPlansButton.addEventListener('click', () => {
-        planSelectionView.style.display = 'block';
-        paymentSelectionView.style.display = 'none';
-    });
-    if (paypalPaymentButton) paypalPaymentButton.addEventListener('click', handlePayPalPayment);
-    if (cardPaymentOverlay) cardPaymentOverlay.addEventListener('click', () => {
-        showSettingsToast('Credit card payments are coming soon!', 'success');
-    });
-    if (managePinButton) managePinButton.addEventListener('click', () => {
-      pinAction = 'settings';
-      const users = JSON.parse(localStorage.getItem('users') || '{}');
-      const hasPin = users[currentUser]?.parentalPin;
-      showPinModal(hasPin ? 'enter' : 'set');
-    });
-    setupPinInputs();
-}
-
-// --- Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
-    cacheDOMElements();
-    setupEventListeners();
-    
-    // Simulate loading time for splash screen
-    setTimeout(() => {
-        checkAuthStatus();
-        if (splashScreen) {
-            splashScreen.classList.add('hidden');
-        }
-    }, 1500);
-});
-
-// --- Parental PIN Logic ---
-
-function showPinModal(view: 'set' | 'enter') {
-    if (!parentalPinModal) return;
-
-    // Reset state
-    pinMessage.textContent = '';
-    pinInputs.forEach(input => input.value = '');
-    pinInputContainer.classList.remove('shake');
-    pinSetInputContainer.classList.remove('shake');
-    pinConfirmInputContainer.classList.remove('shake');
-
-    if (view === 'enter') {
-        pinEnterView.style.display = 'block';
-        pinSetView.style.display = 'none';
-        pinModalTitle.textContent = 'Enter Parental PIN';
-        pinModalSubtitle.textContent = 'Please enter your 4-digit PIN to proceed.';
-        (pinEnterView.querySelector('.pin-input') as HTMLElement)?.focus();
-    } else { // 'set'
-        pinEnterView.style.display = 'none';
-        pinSetView.style.display = 'block';
-        setPinButton.style.display = 'block';
-        pinSetInputContainer.style.display = 'flex';
-        pinConfirmInputContainer.style.display = 'none';
-        pinModalTitle.textContent = 'Set Parental PIN';
-        pinModalSubtitle.textContent = 'Create a 4-digit PIN to secure payments.';
-        (pinSetInputContainer.querySelector('.pin-input') as HTMLElement)?.focus();
-    }
-
-    parentalPinModal.style.display = 'flex';
-}
-
-function getPinFromInputs(container: HTMLDivElement): string {
-    const inputs = container.querySelectorAll<HTMLInputElement>('.pin-input');
-    return Array.from(inputs).map(i => i.value).join('');
-}
-
-function clearPinInputs(container: HTMLDivElement) {
-    const inputs = container.querySelectorAll<HTMLInputElement>('.pin-input');
-    inputs.forEach(i => i.value = '');
-    inputs[0]?.focus();
-}
-
-function handlePinConfirm() {
-    if (!currentUser) return;
-    const pin = getPinFromInputs(pinInputContainer);
-    if (pin.length < 4) return;
-
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    const storedPin = users[currentUser]?.parentalPin;
-
-    if (pin === storedPin) {
-        parentalPinModal.style.display = 'none';
-        if (pinAction === 'payment') {
-            processSubscriptionPayment();
-        } else if (pinAction === 'settings') {
-             showPinModal('set');
-        }
-    } else {
-        pinMessage.textContent = 'Incorrect PIN. Please try again.';
-        pinInputContainer.classList.add('shake');
-        setTimeout(() => pinInputContainer.classList.remove('shake'), 500);
-        clearPinInputs(pinInputContainer);
-    }
-}
-
-function handlePinSet() {
-    if (!currentUser) return;
-    const newPin = getPinFromInputs(pinSetInputContainer);
-    const confirmPin = getPinFromInputs(pinConfirmInputContainer);
-
-    if (pinConfirmInputContainer.style.display === 'none') {
-        if (newPin.length === 4) {
-            pinModalSubtitle.textContent = 'Confirm your new PIN.';
-            pinSetInputContainer.style.display = 'none';
-            pinConfirmInputContainer.style.display = 'flex';
-            clearPinInputs(pinConfirmInputContainer);
-        } else {
-            pinMessage.textContent = 'PIN must be 4 digits.';
-        }
-    } else {
-        if (confirmPin.length === 4) {
-            if (newPin === confirmPin) {
-                const users = JSON.parse(localStorage.getItem('users') || '{}');
-                users[currentUser].parentalPin = newPin;
-                localStorage.setItem('users', JSON.stringify(users));
-                
-                parentalPinModal.style.display = 'none';
-                showSettingsToast('PIN set successfully!');
-
-                if (pinAction === 'payment') {
-                    processSubscriptionPayment();
-                }
-
-            } else {
-                pinMessage.textContent = "PINs do not match. Please try again.";
-                pinSetInputContainer.style.display = 'flex';
-                pinConfirmInputContainer.style.display = 'none';
-                clearPinInputs(pinSetInputContainer);
-                clearPinInputs(pinConfirmInputContainer);
-                pinModalSubtitle.textContent = 'Create a 4-digit PIN to secure payments.';
-                pinSetView.classList.add('shake');
-                setTimeout(() => pinSetView.classList.remove('shake'), 500);
-            }
-        }
-    }
-}
-
-function setupPinInputs() {
-    pinModalViewContainer.addEventListener('input', (e) => {
-        const target = e.target as HTMLInputElement;
-        if (target.matches('.pin-input') && target.value) {
-            const next = target.nextElementSibling as HTMLInputElement;
-            if (next) {
-                next.focus();
-            }
-        }
-    });
-
-    pinModalViewContainer.addEventListener('keydown', (e) => {
-        const target = e.target as HTMLInputElement;
-        if (e.key === 'Backspace' && !target.value) {
-            const prev = target.previousElementSibling as HTMLInputElement;
-            if (prev) {
-                prev.focus();
-            }
-        }
-    });
-    
-    pinInputContainer.addEventListener('input', handlePinConfirm);
-    setPinButton.addEventListener('click', handlePinSet);
-    forgotPinLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      showSettingsToast('PIN reset instructions sent to your email.', 'success');
-      parentalPinModal.style.display = 'none';
-    });
-}
+    if (domainForm)

@@ -2075,6 +2075,71 @@ input:checked + .toggle-slider:before {
     letter-spacing: normal;
 }
 
+/* Domain Section */
+#domain-status-container {
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    border: 1px solid transparent;
+    transition: all 0.3s;
+}
+#domain-status-container.status-disconnected {
+    background-color: rgba(217, 48, 37, 0.1);
+    border-color: rgba(217, 48, 37, 0.3);
+    color: var(--danger-color);
+}
+#domain-status-container.status-pending {
+    background-color: rgba(253, 187, 45, 0.1);
+    border-color: rgba(253, 187, 45, 0.3);
+    color: #f57c00;
+}
+#domain-status-container.status-connected {
+    background-color: rgba(52, 168, 83, 0.1);
+    border-color: rgba(52, 168, 83, 0.3);
+    color: var(--secondary-color);
+}
+#domain-status-container h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+}
+#domain-status-container p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+.status-badge {
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}
+#dns-instructions {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+.dns-record-card {
+    background-color: var(--subtle-background);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+.dns-record-card p {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-color);
+}
+.dns-record-card p:last-child {
+    margin-bottom: 0;
+}
+.dns-record-card strong {
+    color: var(--primary-color);
+    font-family: inherit;
+}
+
+
 /* Privacy & Security Section */
 .privacy-section {
     padding: 0.75rem 0;
